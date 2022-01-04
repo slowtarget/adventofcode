@@ -1,20 +1,20 @@
 import run from "aocrunner";
-const  unique = <T extends Object> (value:T, index:number, self: T[]) => {
-  var first = self.findIndex(p=>p.toString()===value.toString());
+const unique = <T extends Object>(value: T, index: number, self: T[]) => {
+  var first = self.findIndex(p => p.toString() === value.toString());
   return first === index;
 }
 class Counter {
-  private count:{[key:string]:number} = {};
-  inc(key:string, value:number) {
+  private count: { [key: string]: number } = {};
+  inc(key: string, value: number) {
     if (this.count[key]) {
       this.count[key] += value;
     } else {
       this.count[key] = value;
     }
   }
-  dec(key:string, value:number) {
-    if (!this.count[key] || this.count[key] < value ) {
-      throw new Error ('cannot decrement!');
+  dec(key: string, value: number) {
+    if (!this.count[key] || this.count[key] < value) {
+      throw new Error(`cannot decrement! ${key}:${value} => ${this.count[key]}`);
     }
     this.count[key] -= value;
   }
@@ -27,8 +27,8 @@ class Counter {
   range() {
     return this.max() - this.min();
   }
-  set(count:{[key:string]:number}) {
-    this.count = {...count};
+  set(count: { [key: string]: number }) {
+    this.count = { ...count };
   }
   get() {
     return this.count;
@@ -40,26 +40,38 @@ class Counter {
   }
 }
 class Polymer {
-  public elements:Counter = new Counter();
-  public pairs:Counter = new Counter();
-  constructor (
-      public state:string
+  public elements: Counter = new Counter();
+  public pairs: Counter = new Counter();
+  constructor(
+    public state: string
   ) {
-    this.state.split('').forEach((e,i,self)=>{
-      this.elements.inc(e,1);
-      if (i!==0) {
-        var pair = `${self[i-1]}${e}`;
-        this.pairs.inc(pair,1);
+    this.state.split('').forEach((e, i, self) => {
+      this.elements.inc(e, 1);
+      if (i !== 0) {
+        var pair = `${self[i - 1]}${e}`;
+        this.pairs.inc(pair, 1);
       }
     });
   }
-
-  public clone():Polymer {
-      var copy = new Polymer('');
-      copy.state = this.state;
-      copy.elements = this.elements.clone();
-      copy.pairs = this.pairs.clone();
-      return copy;
+  step(rules:Rules) {
+    Object.entries(this.pairs.get()).forEach(([pair, count]) => {
+      if (count > 0) {
+        var insert = rules[pair];
+        if (insert) {
+          this.pairs.inc(pair[0] + insert, count);
+          this.pairs.inc(insert + pair[1], count);
+          this.pairs.dec(pair, count);
+          this.elements.inc(insert, count);
+        }
+      }
+    })
+  }
+  public clone(): Polymer {
+    var copy = new Polymer('');
+    copy.state = this.state;
+    copy.elements = this.elements.clone();
+    copy.pairs = this.pairs.clone();
+    return copy;
   }
 
   result() {
@@ -67,61 +79,52 @@ class Polymer {
   }
 }
 class Rule {
-  public pair:string;
-  public insert:string; 
-  constructor (
-      public input:string
+  public pair: string;
+  public insert: string;
+  constructor(
+    public input: string
   ) {
-      [this.pair, this.insert] = input.split(' -> ');
+    [this.pair, this.insert] = input.split(' -> ');
   }
 
-  public clone():Rule {
-      return new Rule(this.input);
+  public clone(): Rule {
+    return new Rule(this.input);
   }
 }
 
 type Rules = {
-  [index:string]:string
+  [index: string]: string
 }
 class Puzzle {
-  private ruleMap:Rules;
+  private ruleMap: Rules;
 
-  constructor (
-      public polymer:Polymer,
-      public rules:Rule[]
-      
+  constructor(
+    public polymer: Polymer,
+    public rules: Rule[]
+
   ) {
-      this.ruleMap = rules.reduce((p,c)=>({...p, [c.pair]:c.insert}),{});
+    this.ruleMap = rules.reduce((p, c) => ({ ...p, [c.pair]: c.insert }), {});
   }
 
-  public clone():Puzzle {
-      return new Puzzle(this.polymer.clone(), this.rules.map(rule=>rule.clone()) );
+  public clone(): Puzzle {
+    return new Puzzle(this.polymer.clone(), this.rules.map(rule => rule.clone()));
   }
-  
-  public solve(steps:number): number {
 
-      for (var step = 1; step < steps; step ++) {
-          Object.entries(this.polymer.pairs.get()).forEach(([pair,count]) => {
-              var insert = this.ruleMap[pair];
-              if (insert) {
-                this.polymer.pairs.inc(pair[0]+insert,count);
-                this.polymer.pairs.inc(insert+pair[1],count);
-                this.polymer.pairs.dec(pair,count);
-                this.polymer.elements.inc(insert,count);
-              }
-          })
-      }
+  public solve(steps: number): number {
 
-       return this.polymer.result();
+    for (var step = 0; step < steps; step++) {
+      this.polymer.step(this.ruleMap);
+    }
+    return this.polymer.result();
   }
 }
 
 const parseInput = (rawInput: string) => {
   var [template, rules] = rawInput
-            .replace(/\r\n/g,'\n')
-            .split(/\n\n/g);
+    .replace(/\r\n/g, '\n')
+    .split(/\n\n/g);
 
-    return new Puzzle(new Polymer(template), rules.split(/\n/).map(rule=>new Rule(rule)));;
+  return new Puzzle(new Polymer(template), rules.split(/\n/).map(rule => new Rule(rule)));;
 }
 
 const part1 = (rawInput: string) => {
@@ -131,7 +134,6 @@ const part1 = (rawInput: string) => {
 
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
-
   return input.solve(40);
 };
 
