@@ -45,9 +45,6 @@ const elapsed = (beginning: number = begunAt, logit: boolean = false) => {
   return duration;
 }
 class Pair {
-
-
-
   public parent?: Pair;
   public leftChild?: boolean;
   public leftOrder: number = -1;
