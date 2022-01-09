@@ -342,15 +342,15 @@
     {
       "part1": {
         "solved": false,
-        "result": null,
+        "result": "351",
         "attempts": [],
-        "time": null
+        "time": 239.8972
       },
       "part2": {
         "solved": false,
-        "result": null,
+        "result": "0",
         "attempts": [],
-        "time": null
+        "time": 0.0325
       }
     }
   ]
