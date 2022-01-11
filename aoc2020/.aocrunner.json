@@ -132,15 +132,15 @@
     {
       "part1": {
         "solved": false,
-        "result": null,
+        "result": "2232",
         "attempts": [],
-        "time": null
+        "time": 0.2488
       },
       "part2": {
         "solved": false,
-        "result": null,
+        "result": "173625106649344",
         "attempts": [],
-        "time": null
+        "time": 0.1358
       }
     },
     {
