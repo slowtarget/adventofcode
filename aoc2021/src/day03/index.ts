@@ -1,32 +1,38 @@
 import run from "aocrunner";
 
-const parseInput = (rawInput: string) => rawInput.replace(/\r\n/g, '\n').split('\n');
+const parseInput = (rawInput: string) =>
+  rawInput.replace(/\r\n/g, "\n").split("\n");
 const mostPopular = (freq: number[], mid: number) => {
-  return parseInt(freq.map((x, i) => x > mid ? '1' : '0').join(''), 2);
-}
+  return parseInt(freq.map((x, i) => (x > mid ? "1" : "0")).join(""), 2);
+};
 const leastPopular = (freq: number[], mid: number) => {
-  return parseInt(freq.map((x, i) => x > mid ? '0' : '1').join(''), 2);
-}
+  return parseInt(freq.map((x, i) => (x > mid ? "0" : "1")).join(""), 2);
+};
 const getFrequencies = (input: string[]) => {
   return input.reduce((frequencies, c) => {
-    c.split('').forEach((x, i) => {
-      if (x === '1') {
+    c.split("").forEach((x, i) => {
+      if (x === "1") {
         frequencies[i]++;
       }
     });
     return frequencies;
   }, new Array(input[0].length).fill(0));
-}
+};
 
 const getFrequenciesII = (input: string[]) => {
-  return [...Array(input[0].length).keys()].map(y=>input.filter(s => s.charAt(y) === '1').length);
-}
+  return [...Array(input[0].length).keys()].map(
+    (y) => input.filter((s) => s.charAt(y) === "1").length,
+  );
+};
 
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
 
   var frequencies = getFrequenciesII(input);
-  return mostPopular(frequencies, input.length / 2) * leastPopular(frequencies, input.length / 2);
+  return (
+    mostPopular(frequencies, input.length / 2) *
+    leastPopular(frequencies, input.length / 2)
+  );
 };
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
@@ -35,16 +41,24 @@ const part2 = (rawInput: string) => {
   var next = [...input];
   for (var y = 0; y < input[0].length && next.length !== 1; y++) {
     var remainder = [...next];
-    var bit = remainder.filter(s => s.charAt(y) === '1').length >= remainder.length / 2 ? '1' : '0';
-    next = remainder.filter(s => s.charAt(y) === bit);
+    var bit =
+      remainder.filter((s) => s.charAt(y) === "1").length >=
+      remainder.length / 2
+        ? "1"
+        : "0";
+    next = remainder.filter((s) => s.charAt(y) === bit);
   }
   var most = next[0];
   // least popular
   next = [...input];
   for (y = 0; y < input[0].length && next.length !== 1; y++) {
     remainder = [...next];
-    bit = (remainder.filter(s => s.charAt(y) === '1').length) >= (remainder.length / 2) ? '0' : '1';
-    next = remainder.filter(s => s.charAt(y) === bit);
+    bit =
+      remainder.filter((s) => s.charAt(y) === "1").length >=
+      remainder.length / 2
+        ? "0"
+        : "1";
+    next = remainder.filter((s) => s.charAt(y) === bit);
   }
   var least = next[0];
   return parseInt(most, 2) * parseInt(least, 2);

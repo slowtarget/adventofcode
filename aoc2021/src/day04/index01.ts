@@ -1,47 +1,72 @@
 import run from "aocrunner";
-type Line = { numbers: { [n: number]: true }, board: number }
+type Line = { numbers: { [n: number]: true }; board: number };
 
 const parseInput = (rawInput: string) => {
+  const [drawnInput, ...boardsInput] = rawInput
+    .replace(/\r\n/g, "\n")
+    .split("\n\n");
+  const drawn = drawnInput.split(",").map((x) => parseInt(x, 10));
+  var numbers: { [n: number]: { lines: Line[]; boards: Line[] } } = {};
+  drawn.forEach((e) => (numbers[e] = { lines: [], boards: [] }));
+  const boardsParsed: number[][][] = boardsInput.map((board) =>
+    board.split(/\n/).map((l) =>
+      l
+        .trim()
+        .split(/\s+/g)
+        .map((x) => parseInt(x, 10)),
+    ),
+  );
+  var linesInput = boardsParsed
+    .map((board, i) => board.map((line) => ({ board: i, line })))
+    .concat(
+      ...boardsParsed.map((board, i) =>
+        [...Array(board[0].length).keys()].map((y) => ({
+          board: i,
+          line: board.map((line) => line[y]),
+        })),
+      ),
+    )
+    .flatMap((a) => a);
 
-  const [drawnInput, ...boardsInput] = rawInput.replace(/\r\n/g, '\n').split('\n\n');
-  const drawn = drawnInput.split(',').map(x => parseInt(x, 10));
-  var numbers: { [n: number]: { lines: Line[], boards: Line[] } } = {};
-  drawn.forEach(e => numbers[e] = { lines: [], boards: [] });
-  const boardsParsed: number[][][] = boardsInput.map(board => board.split(/\n/).map(l => l.trim().split(/\s+/g).map(x => parseInt(x, 10))));
-  var linesInput = boardsParsed.map((board, i) => board.map(line => ({ board: i, line }))).concat(
-    ...boardsParsed.map((board, i) => [...Array(board[0].length).keys()].map(y => ({ board: i, line: board.map(line => line[y]) })))).flatMap(a => a);
-
-  linesInput.forEach(lineInput => {
+  linesInput.forEach((lineInput) => {
     var line = <Line>{ numbers: {}, board: lineInput.board };
-    lineInput.line.forEach(n => {
+    lineInput.line.forEach((n) => {
       line.numbers[n] = true;
       numbers[n].lines.push(line);
     });
   });
-  var boards = boardsParsed.map((boardParsed,i)=>{
-    var board =  <Line>{ numbers: {}, board: i };
-    boardParsed.flatMap(n=>n).forEach(n => {
-      board.numbers[n] = true;
-      numbers[n].boards.push(board);
-    });
+  var boards = boardsParsed.map((boardParsed, i) => {
+    var board = <Line>{ numbers: {}, board: i };
+    boardParsed
+      .flatMap((n) => n)
+      .forEach((n) => {
+        board.numbers[n] = true;
+        numbers[n].boards.push(board);
+      });
     return board;
   });
-  return { drawn, numbers , boards};
+  return { drawn, numbers, boards };
 };
 const part1 = (rawInput: string): number => {
-  const { drawn, numbers , boards } = parseInput(rawInput);
-  var result: number|undefined;
-  var num: number=0;
+  const { drawn, numbers, boards } = parseInput(rawInput);
+  var result: number | undefined;
+  var num: number = 0;
   var drawIndex = 0;
   while (drawIndex < drawn.length && !result) {
     num = drawn[drawIndex];
-    numbers[num].boards.forEach(board=>{delete board.numbers[num]});
-    numbers[num].lines.forEach(line=>{delete line.numbers[num]});
-    
-    numbers[num].lines.forEach(line => {
+    numbers[num].boards.forEach((board) => {
+      delete board.numbers[num];
+    });
+    numbers[num].lines.forEach((line) => {
+      delete line.numbers[num];
+    });
+
+    numbers[num].lines.forEach((line) => {
       if (Object.keys(line.numbers).length === 0 && !result) {
-        result = Object.keys(boards[line.board].numbers).reduce((p, c) => p + parseInt(c,10), 0);
-        
+        result = Object.keys(boards[line.board].numbers).reduce(
+          (p, c) => p + parseInt(c, 10),
+          0,
+        );
       }
     });
     delete numbers[num];
@@ -52,28 +77,39 @@ const part1 = (rawInput: string): number => {
 };
 
 const part2 = (rawInput: string) => {
-  const {  drawn, numbers , boards} = parseInput(rawInput);
-  var result: number|undefined;
-  var num: number =0;
+  const { drawn, numbers, boards } = parseInput(rawInput);
+  var result: number | undefined;
+  var num: number = 0;
   var drawIndex = 0;
   var remainingBoards = [...boards.keys()];
   while (drawIndex < drawn.length && !result) {
-    num = drawn[drawIndex];    
-    numbers[num].boards.forEach(board=>{delete board.numbers[num]});
-    numbers[num].lines.forEach(line=>{delete line.numbers[num]});
-    
-    numbers[num].lines.forEach(line => {
+    num = drawn[drawIndex];
+    numbers[num].boards.forEach((board) => {
+      delete board.numbers[num];
+    });
+    numbers[num].lines.forEach((line) => {
+      delete line.numbers[num];
+    });
+
+    numbers[num].lines.forEach((line) => {
       if (Object.keys(line.numbers).length === 0) {
         // we have a winner
-        if (remainingBoards.length === 1 ) {
+        if (remainingBoards.length === 1) {
           // we have a result
-          result = Object.keys(boards[line.board].numbers).reduce((p, c) => p + parseInt(c,10), 0);
+          result = Object.keys(boards[line.board].numbers).reduce(
+            (p, c) => p + parseInt(c, 10),
+            0,
+          );
         } else {
-          remainingBoards = remainingBoards.filter(x => x !== line.board);
+          remainingBoards = remainingBoards.filter((x) => x !== line.board);
           // remove this winning boards lines for all the remaining numbers on the board...
-          Object.keys(boards[line.board].numbers).map(Number).forEach(n=>{
-            numbers[n].lines = numbers[n].lines.filter(l=>l.board!==line.board)
-          });
+          Object.keys(boards[line.board].numbers)
+            .map(Number)
+            .forEach((n) => {
+              numbers[n].lines = numbers[n].lines.filter(
+                (l) => l.board !== line.board,
+              );
+            });
         }
       }
     });

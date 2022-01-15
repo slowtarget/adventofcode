@@ -1,12 +1,12 @@
 import run from "aocrunner";
 type Coord = {
-  x: number,
-  y: number
-}
+  x: number;
+  y: number;
+};
 type Vector = {
-  a: Coord,
-  b: Coord
-}
+  a: Coord;
+  b: Coord;
+};
 const incrementForCoord = (c: Coord, area: number[][]) => {
   if (area.length >= c.x && area[c.x]) {
     if (area[c.x].length >= c.y && area[c.x][c.y]) {
@@ -19,7 +19,7 @@ const incrementForCoord = (c: Coord, area: number[][]) => {
     col[c.y] = 1;
     area[c.x] = col;
   }
-}
+};
 const getDelta = (start: number, end: number): number => {
   var delta: number;
   if (start < end) {
@@ -30,12 +30,12 @@ const getDelta = (start: number, end: number): number => {
     delta = 0;
   }
   return delta;
-}
+};
 const incrementsForVector = (v: Vector, area: number[][]) => {
   var dx = getDelta(v.a.x, v.b.x);
   var dy = getDelta(v.a.y, v.b.y);
 
-  var len = (Math.max(Math.abs(v.a.x - v.b.x), Math.abs(v.a.y - v.b.y)));
+  var len = Math.max(Math.abs(v.a.x - v.b.x), Math.abs(v.a.y - v.b.y));
   var { x, y } = v.a;
   var pos = 0;
   while (pos <= len) {
@@ -44,28 +44,34 @@ const incrementsForVector = (v: Vector, area: number[][]) => {
     y = y + dy;
     pos++;
   }
-}
+};
 
 const getResult = (area: number[][]) => {
-  return area.reduce((prev, col) => prev + col?.reduce((p, c) => p + ((c && c > 1) ? 1 : 0), 0) || 0, 0);
-}
+  return area.reduce(
+    (prev, col) =>
+      prev + col?.reduce((p, c) => p + (c && c > 1 ? 1 : 0), 0) || 0,
+    0,
+  );
+};
 
-const parseInput = (rawInput: string) => rawInput.replace(/\r\n/g, '\n')
-  .split(/\n/g)
-  .map(v => v.trim())
-  .map(v => v.match(/^(\d+),(\d+) -> (\d+),(\d+)+$/))
-  .filter(v => v != null)
-  .map(arr => arr!.map(v => parseInt(v, 10)))
-  .map(arr => {
-    const [, ax, ay, bx, by] = arr;
-    return <Vector>{ a: <Coord>{ x: ax, y: ay }, b: <Coord>{ x: bx, y: by } };
-  });
+const parseInput = (rawInput: string) =>
+  rawInput
+    .replace(/\r\n/g, "\n")
+    .split(/\n/g)
+    .map((v) => v.trim())
+    .map((v) => v.match(/^(\d+),(\d+) -> (\d+),(\d+)+$/))
+    .filter((v) => v != null)
+    .map((arr) => arr!.map((v) => parseInt(v, 10)))
+    .map((arr) => {
+      const [, ax, ay, bx, by] = arr;
+      return <Vector>{ a: <Coord>{ x: ax, y: ay }, b: <Coord>{ x: bx, y: by } };
+    });
 
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
   var area: number[][] = [];
-  var filtered = input.filter(v => v.a.x === v.b.x || v.a.y === v.b.y);
-  filtered.forEach(v => incrementsForVector(v, area));
+  var filtered = input.filter((v) => v.a.x === v.b.x || v.a.y === v.b.y);
+  filtered.forEach((v) => incrementsForVector(v, area));
   // display(input, area)
   return getResult(area);
 };
@@ -73,7 +79,7 @@ const part1 = (rawInput: string) => {
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
   var area: number[][] = [];
-  input.forEach(v => incrementsForVector(v, area));
+  input.forEach((v) => incrementsForVector(v, area));
   return getResult(area);
 };
 const testInput = `
@@ -110,10 +116,9 @@ run({
   onlyTests: false,
 });
 
-
 function display(filtered: Vector[], area: number[][]) {
-  const xvalues = filtered.map(v => [v.a.x, v.b.x]).flatMap(xarr => xarr);
-  const yvalues = filtered.map(v => [v.a.y, v.b.y]).flatMap(yarr => yarr);
+  const xvalues = filtered.map((v) => [v.a.x, v.b.x]).flatMap((xarr) => xarr);
+  const yvalues = filtered.map((v) => [v.a.y, v.b.y]).flatMap((yarr) => yarr);
   const { min: minx, max: maxx } = getMinMax(xvalues);
   const { min: miny, max: maxy } = getMinMax(yvalues);
 
@@ -134,7 +139,7 @@ function display(filtered: Vector[], area: number[][]) {
 function getMinMax(values: number[]) {
   // should have just used Math.min etc
   return {
-    min: values.reduce((p, x) => x < p ? x : p, 999999999),
-    max: values.reduce((p, x) => x > p ? x : p, 0)
+    min: values.reduce((p, x) => (x < p ? x : p), 999999999),
+    max: values.reduce((p, x) => (x > p ? x : p), 0),
   };
 }

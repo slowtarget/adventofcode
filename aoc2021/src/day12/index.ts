@@ -1,38 +1,36 @@
 import run from "aocrunner";
 var clones = 0;
-type Input = ({ a: string, b: string });
+type Input = { a: string; b: string };
 class Cave {
   constructor(
     public big: boolean,
     public label: string,
     public paths: { [label: string]: Cave },
     public start: boolean,
-    public end: boolean
-  ) { }
+    public end: boolean,
+  ) {}
   clone() {
     return new Cave(this.big, this.label, this.paths, this.start, this.end);
   }
 }
 class CaveMap {
   public caveMap: { [label: string]: Cave };
-  constructor(
-    caves: Cave[]
-  ) {
+  constructor(caves: Cave[]) {
     this.caveMap = {};
-    caves.forEach(cave => {
+    caves.forEach((cave) => {
       this.caveMap[cave.label] = cave;
     });
-    caves.forEach(cave => {
+    caves.forEach((cave) => {
       var paths = {};
-      Object.keys(cave.paths).forEach(key => {
+      Object.keys(cave.paths).forEach((key) => {
         paths[key] = this.caveMap[key];
-      })
+      });
       cave.paths = paths;
     });
   }
   clone() {
     clones++;
-    return new CaveMap(Object.values(this.caveMap).map(cave => cave.clone()));
+    return new CaveMap(Object.values(this.caveMap).map((cave) => cave.clone()));
   }
 }
 
@@ -40,9 +38,15 @@ type Visits = { [key: string]: boolean };
 
 const unique = <T>(value: T, index: number, self: T[]) => {
   return self.indexOf(value) === index;
-}
+};
 
-const travel = (input: CaveMap, position: string, journey: string[], bonusUsed: boolean, visits: Visits): string[][] => {
+const travel = (
+  input: CaveMap,
+  position: string,
+  journey: string[],
+  bonusUsed: boolean,
+  visits: Visits,
+): string[][] => {
   var bonus = bonusUsed;
   journey.push(position);
   if (input.caveMap[position].end) {
@@ -50,7 +54,7 @@ const travel = (input: CaveMap, position: string, journey: string[], bonusUsed: 
   }
   if (!input.caveMap[position].big) {
     if (visits[position]) {
-      // been here before 
+      // been here before
       if (bonus) {
         return [];
       } else {
@@ -69,24 +73,22 @@ const travel = (input: CaveMap, position: string, journey: string[], bonusUsed: 
   }
 
   return journeys;
-}
+};
 const parseInput = (rawInput: string) => {
   var data = rawInput
-    .replace(/\r\n/g, '\n')
+    .replace(/\r\n/g, "\n")
     .split(/\n/g)
-    .map(v => v.trim())
-    .map(v => v.split("-"))
-    .map(v => (<Input>{ a: v[0], b: v[1] }))
+    .map((v) => v.trim())
+    .map((v) => v.split("-"))
+    .map((v) => <Input>{ a: v[0], b: v[1] });
 
-
-  var caves = data.map(({ a, b }) => [a, b]).flatMap(v => v).filter(unique).map(a =>
-    new Cave(
-      a.toUpperCase() === a,
-      a,
-      {},
-      a === 'start',
-      a === 'end')
-  );
+  var caves = data
+    .map(({ a, b }) => [a, b])
+    .flatMap((v) => v)
+    .filter(unique)
+    .map(
+      (a) => new Cave(a.toUpperCase() === a, a, {}, a === "start", a === "end"),
+    );
 
   var original = new CaveMap(caves);
 
@@ -96,17 +98,17 @@ const parseInput = (rawInput: string) => {
   });
 
   // remove paths back to the start
-  for (var path of Object.keys(original.caveMap['start'].paths)) {
-    delete original.caveMap[path].paths['start'];
+  for (var path of Object.keys(original.caveMap["start"].paths)) {
+    delete original.caveMap[path].paths["start"];
   }
   return original;
-}
+};
 
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
   clones = 0;
-  const result = travel(input, 'start', [], true, {}).length;
-  console.log('clones', clones);
+  const result = travel(input, "start", [], true, {}).length;
+  console.log("clones", clones);
   return result;
 };
 
@@ -115,8 +117,8 @@ const part2 = (rawInput: string) => {
 
   clones = 0;
 
-  const result = travel(input, 'start', [], false, {}).length;
-  console.log('clones', clones);
+  const result = travel(input, "start", [], false, {}).length;
+  console.log("clones", clones);
   return result;
 };
 

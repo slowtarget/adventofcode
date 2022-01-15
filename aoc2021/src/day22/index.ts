@@ -1,48 +1,48 @@
 import run from "aocrunner";
 // https://en.wikipedia.org/wiki/Cost_distance_analysis
 
-var Reset = "\x1b[0m"
-var Bright = "\x1b[1m"
-var Dim = "\x1b[2m"
-var Underscore = "\x1b[4m"
-var Blink = "\x1b[5m"
-var Reverse = "\x1b[7m"
-var Hidden = "\x1b[8m"
-var FgBlack = "\x1b[30m"
-var FgRed = "\x1b[31m"
-var FgGreen = "\x1b[32m"
-var FgYellow = "\x1b[33m"
-var FgBlue = "\x1b[34m"
-var FgMagenta = "\x1b[35m"
-var FgCyan = "\x1b[36m"
-var FgWhite = "\x1b[37m"
-var BgBlack = "\x1b[40m"
-var BgRed = "\x1b[41m"
-var BgGreen = "\x1b[42m"
-var BgYellow = "\x1b[43m"
-var BgBlue = "\x1b[44m"
-var BgMagenta = "\x1b[45m"
-var BgCyan = "\x1b[46m"
+var Reset = "\x1b[0m";
+var Bright = "\x1b[1m";
+var Dim = "\x1b[2m";
+var Underscore = "\x1b[4m";
+var Blink = "\x1b[5m";
+var Reverse = "\x1b[7m";
+var Hidden = "\x1b[8m";
+var FgBlack = "\x1b[30m";
+var FgRed = "\x1b[31m";
+var FgGreen = "\x1b[32m";
+var FgYellow = "\x1b[33m";
+var FgBlue = "\x1b[34m";
+var FgMagenta = "\x1b[35m";
+var FgCyan = "\x1b[36m";
+var FgWhite = "\x1b[37m";
+var BgBlack = "\x1b[40m";
+var BgRed = "\x1b[41m";
+var BgGreen = "\x1b[42m";
+var BgYellow = "\x1b[43m";
+var BgBlue = "\x1b[44m";
+var BgMagenta = "\x1b[45m";
+var BgCyan = "\x1b[46m";
 
 var debug = false;
 const log = (...arg: any[]) => {
   if (debug) {
-    console.log('', ...arg);
+    console.log("", ...arg);
   }
-}
+};
 const unique = <T extends Object>(value: T, index: number, self: T[]) => {
-  var first = self.findIndex(p => p.toString() === value.toString());
+  var first = self.findIndex((p) => p.toString() === value.toString());
   return first === index;
-}
+};
 
 const toKey = (x: number, y: number): string => {
   return `(${x},${y})`;
-}
+};
 const numToRightJustifiedString = (num: number, length: number): string => {
   var s = num.toString(10);
 
-  return s.padStart(length, ' ');
-}
+  return s.padStart(length, " ");
+};
 
 // Returns current time
 // (and, if provided, prints the event's name)
@@ -51,7 +51,7 @@ const now = (eventName: string | null = null) => {
     log(`Started ${eventName}..`);
   }
   return new Date().getTime();
-}
+};
 
 // Store current time as `start`
 let begunAt = now();
@@ -64,13 +64,10 @@ const elapsed = (beginning: number = begunAt, logit: boolean = false) => {
     log(`${duration / 1000}s`);
   }
   return duration;
-}
+};
 class Range {
   public outOfRange = false;
-  constructor(
-    public min: number,
-    public max: number
-  ) {
+  constructor(public min: number, public max: number) {
     max = Math.min(51, Math.max(-51, this.max));
     min = Math.min(51, Math.max(-51, this.min));
     if (min > max) {
@@ -85,7 +82,10 @@ class Range {
   }
   overlap(that: Range): Range | null {
     if (that.max >= this.min && that.min <= this.max) {
-      return new Range(Math.max(this.min, that.min), Math.min(this.max, that.max));
+      return new Range(
+        Math.max(this.min, that.min),
+        Math.min(this.max, that.max),
+      );
     }
     return null;
   }
@@ -98,49 +98,44 @@ class Rule {
     public set: number,
     public xRange: Range,
     public yRange: Range,
-    public zRange: Range
-  ) { }
+    public zRange: Range,
+  ) {}
   outOfRange() {
-    return this.xRange.outOfRange ||
-      this.yRange.outOfRange ||
-      this.zRange.outOfRange;
+    return (
+      this.xRange.outOfRange || this.yRange.outOfRange || this.zRange.outOfRange
+    );
   }
 }
 class RuleBuilder {
-  private regex = /(on|off) x=(-?\d+)\.\.(-?\d+),y=(-?\d+)\.\.(-?\d+),z=(-?\d+)\.\.(-?\d+)/g
+  private regex =
+    /(on|off) x=(-?\d+)\.\.(-?\d+),y=(-?\d+)\.\.(-?\d+),z=(-?\d+)\.\.(-?\d+)/g;
   private set: number = 0;
   private xRange: Range;
   private yRange: Range;
   private zRange: Range;
-  constructor(
-    private rule: string
-  ) {
+  constructor(private rule: string) {
     // on x=-20..26,y=-36..17,z=-47..7
     var matches = this.regex.exec(this.rule);
     if (!matches) {
       throw new Error(`could not parse: ${this.rule}`);
     }
     var [, onOff, ...rest] = matches;
-    if (onOff === 'on') {
+    if (onOff === "on") {
       this.set = 1;
     }
-    var [xmin, xmax, ymin, ymax, zmin, zmax] = rest.map(s => parseInt(s, 10));
+    var [xmin, xmax, ymin, ymax, zmin, zmax] = rest.map((s) => parseInt(s, 10));
     this.xRange = new Range(xmin, xmax);
     this.yRange = new Range(ymin, ymax);
     this.zRange = new Range(zmin, zmax);
   }
   public build(): Rule {
-    return new Rule(this.set,
-      this.xRange,
-      this.yRange,
-      this.zRange);
+    return new Rule(this.set, this.xRange, this.yRange, this.zRange);
   }
 }
 class Grid {
   public grid: number[][][] = new Array(101);
   public on: number = 0;
-  constructor(
-  ) {
+  constructor() {
     for (var x = -50; x <= 50; x++) {
       var ix = x + 50;
       this.grid[ix] = new Array(101);
@@ -181,9 +176,10 @@ class Volume {
     public set: number, // 0 or 1
     public xRange: Range,
     public yRange: Range,
-    public zRange: Range
+    public zRange: Range,
   ) {
-    this.size = xRange.size() * yRange.size() * zRange.size() * (this.set ? 1 : -1);
+    this.size =
+      xRange.size() * yRange.size() * zRange.size() * (this.set ? 1 : -1);
   }
 
   intersection(that: Volume): Volume | null {
@@ -225,14 +221,11 @@ class Volume {
 
     return null;
   }
-
 }
 class Puzzle {
   private grid: Grid;
   private volumes: Volume[] = [];
-  constructor(
-    public rules: Rule[]
-  ) {
+  constructor(public rules: Rule[]) {
     this.grid = new Grid();
     this.volumes = [];
   }
@@ -253,7 +246,10 @@ class Puzzle {
     var i = 0;
     for (var rule of this.rules) {
       var volume = new Volume(rule.set, rule.xRange, rule.yRange, rule.zRange);
-      var intersections: Volume[] = this.volumes.map(current => current.intersection(volume)).filter(a => !!a).map(a => a!);
+      var intersections: Volume[] = this.volumes
+        .map((current) => current.intersection(volume))
+        .filter((a) => !!a)
+        .map((a) => a!);
 
       if (rule.set) {
         // on
@@ -274,22 +270,21 @@ class Puzzle {
 }
 const parseInput = (rawInput: string) => {
   var rules = rawInput
-    .replace(/\r\n/g, '\n')
+    .replace(/\r\n/g, "\n")
     .split(/\n/g)
-    .map(line => new RuleBuilder(line).build())
+    .map((line) => new RuleBuilder(line).build());
 
   return new Puzzle(rules);
-}
-
+};
 
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
-  var part1Puzzle = new Puzzle(input.rules.filter(r => !r.outOfRange()))
+  var part1Puzzle = new Puzzle(input.rules.filter((r) => !r.outOfRange()));
   return part1Puzzle.solve2();
 };
 
 const part2 = (rawInput: string) => {
-  console.log('part2');
+  console.log("part2");
   const input = parseInput(rawInput);
 
   return input.solve2();

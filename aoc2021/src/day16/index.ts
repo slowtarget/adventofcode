@@ -1,60 +1,60 @@
 import run from "aocrunner";
 
-var Reset = "\x1b[0m"
-var Bright = "\x1b[1m"
-var Dim = "\x1b[2m"
-var Underscore = "\x1b[4m"
-var Blink = "\x1b[5m"
-var Reverse = "\x1b[7m"
-var Hidden = "\x1b[8m"
-var FgBlack = "\x1b[30m"
-var FgRed = "\x1b[31m"
-var FgGreen = "\x1b[32m"
-var FgYellow = "\x1b[33m"
-var FgBlue = "\x1b[34m"
-var FgMagenta = "\x1b[35m"
-var FgCyan = "\x1b[36m"
-var FgWhite = "\x1b[37m"
-var BgBlack = "\x1b[40m"
-var BgRed = "\x1b[41m"
-var BgGreen = "\x1b[42m"
-var BgYellow = "\x1b[43m"
-var BgBlue = "\x1b[44m"
-var BgMagenta = "\x1b[45m"
-var BgCyan = "\x1b[46m"
+var Reset = "\x1b[0m";
+var Bright = "\x1b[1m";
+var Dim = "\x1b[2m";
+var Underscore = "\x1b[4m";
+var Blink = "\x1b[5m";
+var Reverse = "\x1b[7m";
+var Hidden = "\x1b[8m";
+var FgBlack = "\x1b[30m";
+var FgRed = "\x1b[31m";
+var FgGreen = "\x1b[32m";
+var FgYellow = "\x1b[33m";
+var FgBlue = "\x1b[34m";
+var FgMagenta = "\x1b[35m";
+var FgCyan = "\x1b[36m";
+var FgWhite = "\x1b[37m";
+var BgBlack = "\x1b[40m";
+var BgRed = "\x1b[41m";
+var BgGreen = "\x1b[42m";
+var BgYellow = "\x1b[43m";
+var BgBlue = "\x1b[44m";
+var BgMagenta = "\x1b[45m";
+var BgCyan = "\x1b[46m";
 
 const hex: { [idx: string]: string } = {
-  '0': '0000',
-  '1': '0001',
-  '2': '0010',
-  '3': '0011',
-  '4': '0100',
-  '5': '0101',
-  '6': '0110',
-  '7': '0111',
-  '8': '1000',
-  '9': '1001',
-  'A': '1010',
-  'B': '1011',
-  'C': '1100',
-  'D': '1101',
-  'E': '1110',
-  'F': '1111'
+  "0": "0000",
+  "1": "0001",
+  "2": "0010",
+  "3": "0011",
+  "4": "0100",
+  "5": "0101",
+  "6": "0110",
+  "7": "0111",
+  "8": "1000",
+  "9": "1001",
+  A: "1010",
+  B: "1011",
+  C: "1100",
+  D: "1101",
+  E: "1110",
+  F: "1111",
 };
 
 const unique = <T extends Object>(value: T, index: number, self: T[]) => {
-  var first = self.findIndex(p => p.toString() === value.toString());
+  var first = self.findIndex((p) => p.toString() === value.toString());
   return first === index;
-}
+};
 
 const toKey = (x: number, y: number): string => {
   return `(${x},${y})`;
-}
+};
 const numToRightJustifiedString = (num: number, length: number): string => {
   var s = num.toString(10);
 
-  return s.padStart(length, ' ');
-}
+  return s.padStart(length, " ");
+};
 const debug = false;
 // Returns current time
 // (and, if provided, prints the event's name)
@@ -63,7 +63,7 @@ const now = (eventName: string | null = null) => {
     console.log(`Started ${eventName}..`);
   }
   return new Date().getTime();
-}
+};
 
 // Store current time as `start`
 let begunAt = now();
@@ -76,16 +76,17 @@ const elapsed = (beginning: number = begunAt, log: boolean = false) => {
     console.log(`${duration / 1000}s`);
   }
   return duration;
-}
+};
 
 class Puzzle {
   bits: string;
   at: number = 0;
   public versionSum: number = 0;
-  constructor(
-    public input: string
-  ) {
-    this.bits = this.input.split('').map(a => hex[a]).join('');
+  constructor(public input: string) {
+    this.bits = this.input
+      .split("")
+      .map((a) => hex[a])
+      .join("");
   }
 
   public solve() {
@@ -128,39 +129,41 @@ class Puzzle {
           results.push(this.processPacket(depth + 1));
         }
       }
-      var op: string = '';
+      var op: string = "";
       switch (type) {
         case 0:
           result = results.reduce((p, c) => p + c, 0);
-          op = '+';
+          op = "+";
           break;
         case 1:
           result = results.reduce((p, c) => p * c, 1);
-          op = '*';
+          op = "*";
           break;
         case 2:
           result = Math.min(...results);
-          op = 'min';
+          op = "min";
           break;
         case 3:
           result = Math.max(...results);
-          op = 'max';
+          op = "max";
           break;
         case 5:
           result = results[0] > results[1] ? 1 : 0;
-          op = '>';
+          op = ">";
           break;
         case 6:
           result = results[0] < results[1] ? 1 : 0;
-          op = '<';
+          op = "<";
           break;
         case 7:
           result = results[0] === results[1] ? 1 : 0;
-          op = '==';
+          op = "==";
           break;
       }
       if (debug) {
-        console.log(`${''.padStart(depth)}${op} [${results.join(', ')}] = ${result}`);
+        console.log(
+          `${"".padStart(depth)}${op} [${results.join(", ")}] = ${result}`,
+        );
       }
       return result;
     }
@@ -195,8 +198,7 @@ class Puzzle {
 
 const parseInput = (rawInput: string) => {
   return new Puzzle(rawInput);
-}
-
+};
 
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
@@ -215,23 +217,23 @@ run({
   part1: {
     tests: [
       {
-        input: 'D2FE28',
+        input: "D2FE28",
         expected: 6,
       },
       {
-        input: '8A004A801A8002F478',
+        input: "8A004A801A8002F478",
         expected: 16,
       },
       {
-        input: '620080001611562C8802118E34',
+        input: "620080001611562C8802118E34",
         expected: 12,
       },
       {
-        input: 'C0015000016115A2E0802F182340',
+        input: "C0015000016115A2E0802F182340",
         expected: 23,
       },
       {
-        input: 'A0016C880162017C3686B18A3D4780',
+        input: "A0016C880162017C3686B18A3D4780",
         expected: 31,
       },
     ],
@@ -249,14 +251,14 @@ run({
   */
   part2: {
     tests: [
-      { input: 'C200B40A82', expected: 3 },
-      { input: '04005AC33890', expected: 54 },
-      { input: '880086C3E88112', expected: 7 },
-      { input: 'CE00C43D881120', expected: 9 },
-      { input: 'D8005AC2A8F0', expected: 1 },
-      { input: 'F600BC2D8F', expected: 0 },
-      { input: '9C005AC2F8F0', expected: 0 },
-      { input: '9C0141080250320F1802104A08', expected: 1 },
+      { input: "C200B40A82", expected: 3 },
+      { input: "04005AC33890", expected: 54 },
+      { input: "880086C3E88112", expected: 7 },
+      { input: "CE00C43D881120", expected: 9 },
+      { input: "D8005AC2A8F0", expected: 1 },
+      { input: "F600BC2D8F", expected: 0 },
+      { input: "9C005AC2F8F0", expected: 0 },
+      { input: "9C0141080250320F1802104A08", expected: 1 },
     ],
     solution: part2,
   },

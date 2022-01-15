@@ -1,27 +1,26 @@
 import run from "aocrunner";
 
-
 type PairOrNumber = Pair | number;
 
 var debug = false;
 const log = (...arg: any[]) => {
   if (debug) {
-    console.log('', ...arg);
+    console.log("", ...arg);
   }
-}
+};
 const unique = <T extends Object>(value: T, index: number, self: T[]) => {
-  var first = self.findIndex(p => p.toString() === value.toString());
+  var first = self.findIndex((p) => p.toString() === value.toString());
   return first === index;
-}
+};
 
 const toKey = (x: number, y: number): string => {
   return `(${x},${y})`;
-}
+};
 const numToRightJustifiedString = (num: number, length: number): string => {
   var s = num.toString(10);
 
-  return s.padStart(length, ' ');
-}
+  return s.padStart(length, " ");
+};
 
 // Returns current time
 // (and, if provided, prints the event's name)
@@ -30,7 +29,7 @@ const now = (eventName: string | null = null) => {
     log(`Started ${eventName}..`);
   }
   return new Date().getTime();
-}
+};
 
 // Store current time as `start`
 let begunAt = now();
@@ -43,21 +42,18 @@ const elapsed = (beginning: number = begunAt, logit: boolean = false) => {
     log(`${duration / 1000}s`);
   }
   return duration;
-}
+};
 class Pair {
   public parent?: Pair;
   public leftChild?: boolean;
   public leftOrder: number = -1;
   public rightOrder: number = -1;
-  constructor(
-    public left: PairOrNumber,
-    public right: PairOrNumber
-  ) { }
+  constructor(public left: PairOrNumber, public right: PairOrNumber) {}
   clone(): Pair {
     return new Pair(this.getClone(this.left), this.getClone(this.right));
   }
   getClone(input: PairOrNumber) {
-    if (typeof input === 'number') {
+    if (typeof input === "number") {
       return input + 0;
     } else {
       return input.clone();
@@ -69,7 +65,7 @@ class Pair {
     return Math.max(left, right);
   }
   public getDepth(input: PairOrNumber, depth: number) {
-    if (typeof input === 'number') {
+    if (typeof input === "number") {
       return depth;
     } else {
       return input.getDepthOfNestedPairs(depth + 1);
@@ -79,18 +75,31 @@ class Pair {
     if (depth === 4) {
       return this;
     }
-    if (this.getDepth(this.left, depth) === 4 && typeof this.left !== 'number') {
+    if (
+      this.getDepth(this.left, depth) === 4 &&
+      typeof this.left !== "number"
+    ) {
       return this.left.getFirst4Deep(depth + 1);
     }
-    if (this.getDepth(this.right, depth) === 4 && typeof this.right !== 'number') {
+    if (
+      this.getDepth(this.right, depth) === 4 &&
+      typeof this.right !== "number"
+    ) {
       return this.right.getFirst4Deep(depth + 1);
     }
-    throw new Error('lost in the woods!');
+    throw new Error("lost in the woods!");
   }
-  public traverse(input: number): { pair: Pair, isLeft: boolean, value: number, order: number }[] {
+  public traverse(
+    input: number,
+  ): { pair: Pair; isLeft: boolean; value: number; order: number }[] {
     var order = input + 0;
-    var result: { pair: Pair, isLeft: boolean, value: number, order: number }[] = [];
-    if (typeof this.left === 'number') {
+    var result: {
+      pair: Pair;
+      isLeft: boolean;
+      value: number;
+      order: number;
+    }[] = [];
+    if (typeof this.left === "number") {
       this.leftOrder = order;
       result.push({ pair: this, isLeft: true, value: this.left, order });
       order++;
@@ -98,38 +107,44 @@ class Pair {
       result = [...result, ...this.left.traverse(order)];
       order = result[result.length - 1].order + 1;
     }
-    if (typeof this.right === 'number') {
+    if (typeof this.right === "number") {
       this.rightOrder = order;
       result.push({ pair: this, isLeft: false, value: this.right, order });
-      order++
+      order++;
     } else {
       return [...result, ...this.right.traverse(order)];
     }
     return result;
   }
-  public explode(traversal: { pair: Pair, isLeft: boolean, value: number, order: number }[]) {
+  public explode(
+    traversal: { pair: Pair; isLeft: boolean; value: number; order: number }[],
+  ) {
     debug = false;
     log(`explode ${this.toString()}`);
-    if (typeof this.left === 'number' && typeof this.right === 'number' && this.parent) {
+    if (
+      typeof this.left === "number" &&
+      typeof this.right === "number" &&
+      this.parent
+    ) {
       if (this.leftChild) {
         this.parent.left = 0;
       } else {
         this.parent.right = 0;
       }
       if (this.leftOrder > 0) {
-        var leftTarget = traversal.find(t => t.order === this.leftOrder - 1);
+        var leftTarget = traversal.find((t) => t.order === this.leftOrder - 1);
         if (leftTarget) {
           if (leftTarget.isLeft) {
-            if (typeof leftTarget.pair.left === 'number') {
+            if (typeof leftTarget.pair.left === "number") {
               leftTarget.pair.left = leftTarget.pair.left + this.left;
             } else {
-              throw new Error(`bad left target type (left) ${leftTarget}`)
+              throw new Error(`bad left target type (left) ${leftTarget}`);
             }
           } else {
-            if (typeof leftTarget.pair.right === 'number') {
+            if (typeof leftTarget.pair.right === "number") {
               leftTarget.pair.right = leftTarget.pair.right + this.left;
             } else {
-              throw new Error(`bad left target type (right) ${leftTarget}`)
+              throw new Error(`bad left target type (right) ${leftTarget}`);
             }
           }
         } else {
@@ -138,19 +153,21 @@ class Pair {
       }
       var orderMax = traversal[traversal.length - 1].order;
       if (this.rightOrder < orderMax) {
-        var rightTarget = traversal.find(t => t.order === this.rightOrder + 1);
+        var rightTarget = traversal.find(
+          (t) => t.order === this.rightOrder + 1,
+        );
         if (rightTarget) {
           if (rightTarget.isLeft) {
-            if (typeof rightTarget.pair.left === 'number') {
+            if (typeof rightTarget.pair.left === "number") {
               rightTarget.pair.left = rightTarget.pair.left + this.right;
             } else {
-              throw new Error(`bad right target type (left) ${rightTarget}`)
+              throw new Error(`bad right target type (left) ${rightTarget}`);
             }
           } else {
-            if (typeof rightTarget.pair.right === 'number') {
+            if (typeof rightTarget.pair.right === "number") {
               rightTarget.pair.right = rightTarget.pair.right + this.right;
             } else {
-              throw new Error(`bad right target type (right) ${rightTarget}`)
+              throw new Error(`bad right target type (right) ${rightTarget}`);
             }
           }
         } else {
@@ -160,58 +177,61 @@ class Pair {
 
       return;
     }
-    throw new Error(`Exploding failed Pair: ${this}`)
+    throw new Error(`Exploding failed Pair: ${this}`);
   }
-  getSplitter(): { parent: Pair, leftChild: boolean, value: number; } {
-    if (typeof this.left === 'number' && this.left > 9) {
-      return { parent: this, leftChild: true, value: this.left }
+  getSplitter(): { parent: Pair; leftChild: boolean; value: number } {
+    if (typeof this.left === "number" && this.left > 9) {
+      return { parent: this, leftChild: true, value: this.left };
     }
-    if (typeof this.left !== 'number' && this.left.canSplit()) {
+    if (typeof this.left !== "number" && this.left.canSplit()) {
       return this.left.getSplitter();
     }
-    if (typeof this.right === 'number' && this.right > 9) {
-      return { parent: this, leftChild: false, value: this.right }
+    if (typeof this.right === "number" && this.right > 9) {
+      return { parent: this, leftChild: false, value: this.right };
     }
-    if (typeof this.right !== 'number' && this.right.canSplit()) {
+    if (typeof this.right !== "number" && this.right.canSplit()) {
       return this.right.getSplitter();
     }
     throw new Error("cannot find splitter");
   }
   canSplit(): boolean {
-    if (typeof this.left === 'number' && this.left > 9) {
+    if (typeof this.left === "number" && this.left > 9) {
       return true;
     }
-    if (typeof this.right === 'number' && this.right > 9) {
+    if (typeof this.right === "number" && this.right > 9) {
       return true;
     }
     var left = false;
-    if (typeof this.left !== 'number') {
+    if (typeof this.left !== "number") {
       left = this.left.canSplit();
     }
     if (left) {
       return left;
     }
-    if (typeof this.right !== 'number') {
+    if (typeof this.right !== "number") {
       return this.right.canSplit();
     }
     return false;
   }
   split(leftChild: boolean) {
     var value;
-    if (leftChild && typeof this.left === 'number') {
+    if (leftChild && typeof this.left === "number") {
       value = this.left;
     }
-    if (!leftChild && typeof this.right === 'number') {
+    if (!leftChild && typeof this.right === "number") {
       value = this.right;
     }
     if (value === undefined) {
       log(this, leftChild);
-      throw new Error('split not on a value');
+      throw new Error("split not on a value");
     }
 
-    var split: Pair = new Pair(Math.floor(value / 2), Math.floor((value + 1) / 2));
+    var split: Pair = new Pair(
+      Math.floor(value / 2),
+      Math.floor((value + 1) / 2),
+    );
     split.setParent(this, leftChild);
-    log(`split ${value} to [${split.left},${split.right}]`)
+    log(`split ${value} to [${split.left},${split.right}]`);
     if (leftChild) {
       this.left = split;
     } else {
@@ -221,15 +241,15 @@ class Pair {
   public setParent(parent: Pair | undefined, left: boolean) {
     this.parent = parent;
     this.leftChild = left;
-    if (typeof this.left !== 'number') {
+    if (typeof this.left !== "number") {
       this.left.setParent(this, true);
     }
-    if (typeof this.right !== 'number') {
+    if (typeof this.right !== "number") {
       this.right.setParent(this, false);
     }
   }
   public getMag(value: PairOrNumber) {
-    if (typeof value === 'number') {
+    if (typeof value === "number") {
       return value;
     } else {
       return value.getMagnitude();
@@ -245,19 +265,22 @@ class Pair {
 class PairFactory {
   public left: PairOrNumber;
   public right: PairOrNumber;
-  public both: string = '';
+  public both: string = "";
   public pos: number = 0;
-  constructor(
-    public input: string
-  ) {
-
-    log('Pair constructor : ', '          11111111112222222222333333333344444444445555555555')
-    log('Pair constructor : ', '012345678901234567890123456789012345678901234567890123456789')
-    log('Pair constructor : ', this.input)
+  constructor(public input: string) {
+    log(
+      "Pair constructor : ",
+      "          11111111112222222222333333333344444444445555555555",
+    );
+    log(
+      "Pair constructor : ",
+      "012345678901234567890123456789012345678901234567890123456789",
+    );
+    log("Pair constructor : ", this.input);
     var parsed = this.parse();
     this.left = parsed.left;
     this.right = parsed.right;
-    log('Pair constructor : ', this.left, this.right)
+    log("Pair constructor : ", this.left, this.right);
   }
   public getPair() {
     return new Pair(this.left, this.right);
@@ -282,7 +305,6 @@ class PairFactory {
   }
   public at(pos: number): string {
     if (this.pos < this.both.length) {
-
       log(`at  [${pos}] : ${this.both[pos]}`);
       return this.both[pos];
     }
@@ -290,25 +312,25 @@ class PairFactory {
   }
 
   public parse() {
-    if (this.input[0] !== '[') {
-      throw new Error('not a pair - no leading [');
+    if (this.input[0] !== "[") {
+      throw new Error("not a pair - no leading [");
     }
-    if (this.input[this.input.length - 1] !== ']') {
-      log(this.input)
-      throw new Error('not a pair - no trailing ]');
+    if (this.input[this.input.length - 1] !== "]") {
+      log(this.input);
+      throw new Error("not a pair - no trailing ]");
     }
     this.pos = 0;
     // trim the [ ] from this pair
     this.both = this.input.slice(1, this.input.length - 1);
 
-    log('left')
+    log("left");
     var left = this.getSide();
 
     var char: string = this.read(1);
-    if (char !== ',') {
-      throw new Error('no comma found between left and right');
+    if (char !== ",") {
+      throw new Error("no comma found between left and right");
     }
-    log('right')
+    log("right");
     var right = this.getSide();
     return { left, right };
   }
@@ -317,49 +339,42 @@ class PairFactory {
     var char: string | undefined;
     var depth: number = 0;
 
-    if (this.next(1) === '[') {
+    if (this.next(1) === "[") {
       // left is a pair
-      log('side is a pair');
+      log("side is a pair");
       var inner = this.read(1);
 
       while (this.pos < this.both.length && depth >= 0) {
         char = this.read(1);
         inner += char;
-        if (char === ']') {
+        if (char === "]") {
           depth--;
         }
-        if (char === '[') {
+        if (char === "[") {
           depth++;
         }
       }
 
       log(`pair found ${inner}`);
-      return (new PairFactory(inner)).getPair();
+      return new PairFactory(inner).getPair();
     } else {
-      log('side is a number');
+      log("side is a number");
       // a number ... will be delimited by a comma or end of input
-      var end = this.both.indexOf(',', this.pos);
+      var end = this.both.indexOf(",", this.pos);
       if (end === -1) {
-        end = this.both.length
+        end = this.both.length;
       }
       const num = this.read(end - this.pos);
       log(`number found (length: ${end - this.pos}) ${num}`);
       return parseInt(num);
     }
   }
-
 }
 
 class Puzzle {
-
   private index: number = -1;
   expected?: number;
-  constructor(
-    public input: Pair[]
-  ) {
-
-
-  }
+  constructor(public input: Pair[]) {}
 
   public next(): Pair | undefined {
     this.index++;
@@ -369,14 +384,14 @@ class Puzzle {
     return this.input[this.index];
   }
 
-  public solve(): { magnitude: number, pair: Pair } {
+  public solve(): { magnitude: number; pair: Pair } {
     var result = 0;
     var depth = 0;
     var sum = this.next();
     if (sum === undefined) {
       throw new Error("no pairs to sum");
     }
-    // keep adding to this pair from the rest. 
+    // keep adding to this pair from the rest.
     var next = this.next();
     while (next) {
       log(`summing up ${this.index}`);
@@ -411,17 +426,24 @@ class Puzzle {
     var leftCandidates = [...this.input];
     var rightCandidates = [...this.input];
     var max = 0;
-    var bob: { left: Pair, right: Pair, pair: Pair } = { left: new Pair(0, 0), right: new Pair(0, 0), pair: new Pair(0, 0) };
+    var bob: { left: Pair; right: Pair; pair: Pair } = {
+      left: new Pair(0, 0),
+      right: new Pair(0, 0),
+      pair: new Pair(0, 0),
+    };
     var x = 0;
     for (var left of leftCandidates) {
       for (var right of rightCandidates) {
         if (left !== right) {
           x++;
-          var { magnitude, pair } = (new Puzzle([left.clone(), right.clone()])).solve();
+          var { magnitude, pair } = new Puzzle([
+            left.clone(),
+            right.clone(),
+          ]).solve();
           if (magnitude > max) {
             log(`new max! ${magnitude} after ${x}`);
             max = magnitude;
-            bob = { left, right, pair }
+            bob = { left, right, pair };
           }
         }
       }
@@ -435,15 +457,14 @@ class Puzzle {
 }
 
 const parseInput = (rawInput: string) => {
-
   var snailFishes = rawInput
-    .replace(/\r\n/g, '\n')
+    .replace(/\r\n/g, "\n")
     .split(/\n/g)
-    .map(pair => new PairFactory(pair)).map(pf => pf.getPair());
+    .map((pair) => new PairFactory(pair))
+    .map((pf) => pf.getPair());
 
-  return new Puzzle(snailFishes.map(pair => pair.clone()));
-
-}
+  return new Puzzle(snailFishes.map((pair) => pair.clone()));
+};
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput).solve();
   console.log(input.magnitude);
@@ -539,8 +560,9 @@ run({
         [[9,3],[[9,9],[6,[4,9]]]]
         [[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]]
         [[[[5,2],5],[8,[3,7]]],[[5,[7,5]],[4,4]]]`,
-        expected: '[[[[6,6],[7,6]],[[7,7],[7,0]]],[[[7,7],[7,7]],[[7,8],[9,9]]]]'
-      }
+        expected:
+          "[[[[6,6],[7,6]],[[7,7],[7,0]]],[[[7,7],[7,7]],[[7,8],[9,9]]]]",
+      },
     ],
     solution: part1,
   },
@@ -558,8 +580,8 @@ run({
         [[9,3],[[9,9],[6,[4,9]]]]
         [[2,[[7,7],7]],[[5,8],[[9,3],[0,2]]]]
         [[[[5,2],5],[8,[3,7]]],[[5,[7,5]],[4,4]]]`,
-        expected: 3993
-      }
+        expected: 3993,
+      },
     ],
     solution: part2,
   },

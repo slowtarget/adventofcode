@@ -1,11 +1,8 @@
 import run from "aocrunner";
 
 const parseInput = (rawInput: string) => {
-  return rawInput
-    .replace(/\r\n/g, '\n')
-    .split(/\n\n/g);
-}
-
+  return rawInput.replace(/\r\n/g, "\n").split(/\n\n/g);
+};
 
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);

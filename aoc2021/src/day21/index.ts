@@ -20,12 +20,11 @@ class DeterministicDie implements Die {
   }
 }
 class Player {
-
   constructor(
     public name: string,
     public position: number,
-    public score: number = 0
-  ) { }
+    public score: number = 0,
+  ) {}
 
   toString() {
     return `${this.name} position : ${this.position} score: ${this.score}`;
@@ -61,23 +60,18 @@ class Player {
 
 class Board {
   public winningScore = 1000;
-  constructor(
-    public players: Player[],
-    public frequency: number = 1
-  ) {
-
-  }
+  constructor(public players: Player[], public frequency: number = 1) {}
   getKey() {
-    return `${this.players.map(player => player.getKey()).join(' - ')}`;
+    return `${this.players.map((player) => player.getKey()).join(" - ")}`;
   }
   gameOver() {
-    return this.players.some(player => player.won(this.winningScore));
+    return this.players.some((player) => player.won(this.winningScore));
   }
   getWinner() {
-    return this.players.find(player => player.score >= 21)?.name;
+    return this.players.find((player) => player.score >= 21)?.name;
   }
   loserScore() {
-    return Math.min(...this.players.map(player => player.score));
+    return Math.min(...this.players.map((player) => player.score));
   }
   // andAmove(throw0:number, throw1:number, frequency:number) {
   //     var copy = this.clone(frequency);
@@ -89,15 +83,17 @@ class Board {
   //     return copy;
   // }
   clone(frequency: number) {
-    var board = new Board(this.players.map(player => player.clone()), this.frequency * frequency);
+    var board = new Board(
+      this.players.map((player) => player.clone()),
+      this.frequency * frequency,
+    );
     board.winningScore = this.winningScore;
     return board;
   }
 }
 
-
 // memoize all the possible throws
-var throws: { [name: number]: { roll: number, frequency: number } } = {};
+var throws: { [name: number]: { roll: number; frequency: number } } = {};
 for (var roll1 = 1; roll1 < 4; roll1++) {
   for (var roll2 = 1; roll2 < 4; roll2++) {
     for (var roll3 = 1; roll3 < 4; roll3++) {
@@ -116,23 +112,22 @@ var moves: number[][] = [];
 for (var space = 1; space <= 10; space++) {
   moves[space] = [];
   for (roll = 3; roll <= 9; roll++) {
-    moves[space][roll] = (((space - 1) + roll) % 10) + 1;
+    moves[space][roll] = ((space - 1 + roll) % 10) + 1;
   }
 }
 
 const parseInput = (rawInput: string) => {
-  var regex = /(Player \d+) starting position: (\d+)/
+  var regex = /(Player \d+) starting position: (\d+)/;
   var players = rawInput
-    .replace(/\r\n/g, '\n')
+    .replace(/\r\n/g, "\n")
     .split(/\n/g)
-    .map(line => regex.exec(line))
-    .filter(matches => matches !== null)
-    .map(matches => new Player(matches![1], parseInt(matches![2], 10), 0))
-    .filter(player => !!player);
+    .map((line) => regex.exec(line))
+    .filter((matches) => matches !== null)
+    .map((matches) => new Player(matches![1], parseInt(matches![2], 10), 0))
+    .filter((player) => !!player);
 
   return new Board(players, 1);
-}
-
+};
 
 const part1 = (rawInput: string) => {
   const board = parseInput(rawInput);
@@ -141,7 +136,10 @@ const part1 = (rawInput: string) => {
 
   while (!board.gameOver()) {
     for (var player of board.players) {
-      var dieRoll = [die.roll(), die.roll(), die.roll()].reduce((p, c) => p + c, 0);
+      var dieRoll = [die.roll(), die.roll(), die.roll()].reduce(
+        (p, c) => p + c,
+        0,
+      );
       player.go(dieRoll);
       if (player.won(board.winningScore)) {
         break;
@@ -151,14 +149,18 @@ const part1 = (rawInput: string) => {
   var result = board.loserScore() * die.rolls;
 
   return result;
-}
+};
 
 const part2 = (rawInput: string) => {
   var input = parseInput(rawInput);
   input.winningScore = 21;
 
   var boards = [input];
-  console.log(`starting with \n${input.players.map(player => player.toString()).join(",\n")}`)
+  console.log(
+    `starting with \n${input.players
+      .map((player) => player.toString())
+      .join(",\n")}`,
+  );
   var wins: number[] = new Array(2).fill(0);
 
   while (boards.length > 0) {
@@ -199,7 +201,6 @@ const part2 = (rawInput: string) => {
   //  183752194019471 is too low
   // 5061183604402122 is too high.
   return Math.max(...wins);
-
 };
 
 const testInput = `
@@ -210,8 +211,8 @@ run({
     tests: [
       {
         input: testInput,
-        expected: 739785
-      }
+        expected: 739785,
+      },
     ],
     solution: part1,
   },
@@ -219,9 +220,8 @@ run({
     tests: [
       {
         input: testInput,
-        expected: 444356092776315
-      }
-
+        expected: 444356092776315,
+      },
     ],
     solution: part2,
   },

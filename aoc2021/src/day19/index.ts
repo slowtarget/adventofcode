@@ -1,66 +1,66 @@
 import run from "aocrunner";
 
-var Reset = "\x1b[0m"
-var Bright = "\x1b[1m"
-var Dim = "\x1b[2m"
-var Underscore = "\x1b[4m"
-var Blink = "\x1b[5m"
-var Reverse = "\x1b[7m"
-var Hidden = "\x1b[8m"
-var FgBlack = "\x1b[30m"
-var FgRed = "\x1b[31m"
-var FgGreen = "\x1b[32m"
-var FgYellow = "\x1b[33m"
-var FgBlue = "\x1b[34m"
-var FgMagenta = "\x1b[35m"
-var FgCyan = "\x1b[36m"
-var FgWhite = "\x1b[37m"
-var BgBlack = "\x1b[40m"
-var BgRed = "\x1b[41m"
-var BgGreen = "\x1b[42m"
-var BgYellow = "\x1b[43m"
-var BgBlue = "\x1b[44m"
-var BgMagenta = "\x1b[45m"
-var BgCyan = "\x1b[46m"
+var Reset = "\x1b[0m";
+var Bright = "\x1b[1m";
+var Dim = "\x1b[2m";
+var Underscore = "\x1b[4m";
+var Blink = "\x1b[5m";
+var Reverse = "\x1b[7m";
+var Hidden = "\x1b[8m";
+var FgBlack = "\x1b[30m";
+var FgRed = "\x1b[31m";
+var FgGreen = "\x1b[32m";
+var FgYellow = "\x1b[33m";
+var FgBlue = "\x1b[34m";
+var FgMagenta = "\x1b[35m";
+var FgCyan = "\x1b[36m";
+var FgWhite = "\x1b[37m";
+var BgBlack = "\x1b[40m";
+var BgRed = "\x1b[41m";
+var BgGreen = "\x1b[42m";
+var BgYellow = "\x1b[43m";
+var BgBlue = "\x1b[44m";
+var BgMagenta = "\x1b[45m";
+var BgCyan = "\x1b[46m";
 
 const hex: { [idx: string]: string } = {
-  '0': '0000',
-  '1': '0001',
-  '2': '0010',
-  '3': '0011',
-  '4': '0100',
-  '5': '0101',
-  '6': '0110',
-  '7': '0111',
-  '8': '1000',
-  '9': '1001',
-  'A': '1010',
-  'B': '1011',
-  'C': '1100',
-  'D': '1101',
-  'E': '1110',
-  'F': '1111'
+  "0": "0000",
+  "1": "0001",
+  "2": "0010",
+  "3": "0011",
+  "4": "0100",
+  "5": "0101",
+  "6": "0110",
+  "7": "0111",
+  "8": "1000",
+  "9": "1001",
+  A: "1010",
+  B: "1011",
+  C: "1100",
+  D: "1101",
+  E: "1110",
+  F: "1111",
 };
 
 var debug = false;
 const log = (...arg: any[]) => {
   if (debug) {
-    console.log('', ...arg);
+    console.log("", ...arg);
   }
-}
+};
 const unique = <T extends Object>(value: T, index: number, self: T[]) => {
-  var first = self.findIndex(p => p.toString() === value.toString());
+  var first = self.findIndex((p) => p.toString() === value.toString());
   return first === index;
-}
+};
 
 const toKey = (x: number, y: number): string => {
   return `(${x},${y})`;
-}
+};
 const numToRightJustifiedString = (num: number, length: number): string => {
   var s = num.toString(10);
 
-  return s.padStart(length, ' ');
-}
+  return s.padStart(length, " ");
+};
 
 // Returns current time
 // (and, if provided, prints the event's name)
@@ -69,7 +69,7 @@ const now = (eventName: string | null = null) => {
     log(`Started ${eventName}..`);
   }
   return new Date().getTime();
-}
+};
 
 // Store current time as `start`
 let begunAt = now();
@@ -82,30 +82,30 @@ const elapsed = (beginning: number = begunAt, logit: boolean = false) => {
     log(`${duration / 1000}s`);
   }
   return duration;
-}
-type Neighbour = { beacon: Beacon, distance: number };
-type Pair = { a: Beacon, b: Beacon, distance: number }
+};
+type Neighbour = { beacon: Beacon; distance: number };
+type Pair = { a: Beacon; b: Beacon; distance: number };
 class Beacon {
-
   public neighbours: Neighbour[] = [];
   public neighbourHash: number = 0;
   public scanner?: Scanner;
-  constructor(
-    public x: number,
-    public y: number,
-    public z: number
-  ) { }
+  constructor(public x: number, public y: number, public z: number) {}
   public getSqrDistance(b: Beacon) {
     return (b.x - this.x) ** 2 + (b.y - this.y) ** 2 + (b.z - this.z) ** 2;
   }
   public getManhattenDistance(b: Beacon) {
-    return [(b.x - this.x), (b.y - this.y), (b.z - this.z)].map(Math.abs).reduce((p, c) => p + c, 0);
+    return [b.x - this.x, b.y - this.y, b.z - this.z]
+      .map(Math.abs)
+      .reduce((p, c) => p + c, 0);
   }
   public sortNeighbours() {
     this.neighbours.sort((a, b) => a.distance - b.distance);
   }
   createHashes(criteria: number): void {
-    this.neighbourHash = this.neighbours.slice(0, criteria).map(n => n.distance).reduce((p, c) => p + c, 0);
+    this.neighbourHash = this.neighbours
+      .slice(0, criteria)
+      .map((n) => n.distance)
+      .reduce((p, c) => p + c, 0);
   }
   getDiff(beacon: Beacon) {
     var dx = this.x - beacon.x;
@@ -115,7 +115,10 @@ class Beacon {
   }
   asString(x: number, y: number, z: number) {
     var pad = 4;
-    return `[${numToRightJustifiedString(x, pad)},${numToRightJustifiedString(y, pad)},${numToRightJustifiedString(z, pad)}]`;
+    return `[${numToRightJustifiedString(x, pad)},${numToRightJustifiedString(
+      y,
+      pad,
+    )},${numToRightJustifiedString(z, pad)}]`;
   }
   toString(): string {
     return this.asString(this.x, this.y, this.z);
@@ -125,23 +128,24 @@ class Beacon {
   }
 }
 class Scanner {
-  public merged: { x: number, y: number, z: number, name: string }[] = [];
-  constructor(
-    public name: string,
-    public beacons: Beacon[],
-  ) { }
+  public merged: { x: number; y: number; z: number; name: string }[] = [];
+  constructor(public name: string, public beacons: Beacon[]) {}
 
   // 01234567
   //remove 3
   // slice 0,3 + slice(4
   public getClosest(): Pair {
-    var min = <Pair>{ a: new Beacon(0, 0, 0), b: new Beacon(0, 0, 0), distance: Number.MAX_VALUE };
+    var min = <Pair>{
+      a: new Beacon(0, 0, 0),
+      b: new Beacon(0, 0, 0),
+      distance: Number.MAX_VALUE,
+    };
     var notdone: Beacon[] = [...this.beacons];
-    this.beacons.forEach(bk => {
+    this.beacons.forEach((bk) => {
       bk.neighbours = [];
-    })
+    });
     for (var a of this.beacons) {
-      var remove = notdone.findIndex(x => x === a);
+      var remove = notdone.findIndex((x) => x === a);
       notdone = [...notdone.slice(0, remove), ...notdone.slice(remove + 1)];
       for (var b of notdone) {
         var distance = a.getSqrDistance(b);
@@ -155,19 +159,24 @@ class Scanner {
     return min;
   }
   public sortNeighbours() {
-    this.beacons.forEach(beacon => beacon.sortNeighbours());
-    this.beacons.forEach(beacon => beacon.scanner = this);
+    this.beacons.forEach((beacon) => beacon.sortNeighbours());
+    this.beacons.forEach((beacon) => (beacon.scanner = this));
   }
   public createHashes(criteria: number) {
-    this.beacons.forEach(beacon => beacon.createHashes(criteria));
+    this.beacons.forEach((beacon) => beacon.createHashes(criteria));
   }
   public hasBeacon(other: Beacon): boolean {
-    return this.beacons.some(b => b.equals(other));
+    return this.beacons.some((b) => b.equals(other));
   }
 }
 
 type mappingFunction = (beacon: Beacon) => number;
-const getMappingFn = (value: number, bdx: number, bdy: number, bdz: number): mappingFunction => {
+const getMappingFn = (
+  value: number,
+  bdx: number,
+  bdy: number,
+  bdz: number,
+): mappingFunction => {
   switch (value) {
     case bdx:
       return (beacon: Beacon) => beacon.x;
@@ -182,41 +191,39 @@ const getMappingFn = (value: number, bdx: number, bdy: number, bdz: number): map
     case -1 * bdz:
       return (beacon: Beacon) => beacon.z * -1;
     default:
-      throw new Error('could not map!');
+      throw new Error("could not map!");
   }
-}
+};
 class Puzzle {
   private banned: number[] = [];
   private index: number = -1;
 
   expected?: number;
-  constructor(
-    public scanners: Scanner[]
-  ) {
-
-
-  }
+  constructor(public scanners: Scanner[]) {}
   public findAndMergeScannerPairs() {
     var beaconMap: { [hash: number]: Beacon[] } = {};
     var criteria = 11;
-    ({ criteria, beaconMap } = this.findCandidatesUsingNearestNeighbourHashes(criteria));
+    ({ criteria, beaconMap } =
+      this.findCandidatesUsingNearestNeighbourHashes(criteria));
     var checkedList: Beacon[][] = this.validateCandidates(beaconMap, criteria);
     var current = this.processList(checkedList, criteria);
 
     if (current === this.scanners.length) {
-      log("failed to match and remove a scanner? ! what now?")
+      log("failed to match and remove a scanner? ! what now?");
     }
   }
 
   private processList(checkedList: Beacon[][], criteria: number) {
     var checkIndex = 0;
     var current = this.scanners.length;
-    while (checkIndex < checkedList.length && this.scanners.length === current) {
-
+    while (
+      checkIndex < checkedList.length &&
+      this.scanners.length === current
+    ) {
       var match = checkedList[checkIndex];
       var [a, b] = match;
-      log(' ', a.scanner?.name.padStart(20), b.scanner?.name);
-      log('M', a.toString().padStart(20), b.toString());
+      log(" ", a.scanner?.name.padStart(20), b.scanner?.name);
+      log("M", a.toString().padStart(20), b.toString());
       var candidates: Beacon[][] = [];
       for (var i = 0; i <= criteria; i++) {
         var aa = a.neighbours[i].beacon;
@@ -224,17 +231,25 @@ class Puzzle {
         var { dx: adx, dy: ady, dz: adz } = a.getDiff(aa);
         var { dx: bdx, dy: bdy, dz: bdz } = b.getDiff(bb);
         // all difference values are different and not 0
-        if ([adx, ady, adz, bdx, bdy, bdz].map(Math.abs).filter(unique).filter(n => n !== 0).length === 3) {
+        if (
+          [adx, ady, adz, bdx, bdy, bdz]
+            .map(Math.abs)
+            .filter(unique)
+            .filter((n) => n !== 0).length === 3
+        ) {
           candidates.push([aa, bb]);
         }
-        log('d', aa.asString(adx, ady, adz).padStart(20), bb.asString(bdx, bdy, bdz));
+        log(
+          "d",
+          aa.asString(adx, ady, adz).padStart(20),
+          bb.asString(bdx, bdy, bdz),
+        );
         log(i, aa.toString().padStart(20), bb.toString());
       }
 
       var [aa, bb] = candidates[0] || [undefined, undefined];
       var { dx: adx, dy: ady, dz: adz } = a.getDiff(aa);
       var { dx: bdx, dy: bdy, dz: bdz } = b.getDiff(bb);
-
 
       var xFn = getMappingFn(adx, bdx, bdy, bdz);
       var yFn = getMappingFn(ady, bdx, bdy, bdz);
@@ -245,33 +260,43 @@ class Puzzle {
         var bb = b.neighbours[i].beacon;
         var mm = new Beacon(xFn(bb), yFn(bb), zFn(bb));
 
-        log(i, aa.toString().padStart(20), mm.toString().padStart(20), mm.asString(aa.x - mm.x, aa.y - mm.y, aa.z - mm.z));
-
+        log(
+          i,
+          aa.toString().padStart(20),
+          mm.toString().padStart(20),
+          mm.asString(aa.x - mm.x, aa.y - mm.y, aa.z - mm.z),
+        );
       }
       var [aaa, bbb] = candidates[0];
       var mmm = new Beacon(xFn(bbb), yFn(bbb), zFn(bbb));
-      var scanner: { x: number, y: number, z: number, name: string } = {
+      var scanner: { x: number; y: number; z: number; name: string } = {
         x: aaa.x - mmm.x,
         y: aaa.y - mmm.y,
         z: aaa.z - mmm.z,
-        name: b.scanner!.name
-      }
+        name: b.scanner!.name,
+      };
       var xTr = (beacon: Beacon) => xFn(beacon) + scanner.x;
       var yTr = (beacon: Beacon) => yFn(beacon) + scanner.y;
       var zTr = (beacon: Beacon) => zFn(beacon) + scanner.z;
       var source = aaa.scanner!;
       var target = bbb.scanner!;
-      var targetBeacons = target.beacons.map(beacon => new Beacon(xTr(beacon), yTr(beacon), zTr(beacon)));
+      var targetBeacons = target.beacons.map(
+        (beacon) => new Beacon(xTr(beacon), yTr(beacon), zTr(beacon)),
+      );
       log("check translation");
       for (var i = 0; i <= criteria; i++) {
         var aa = a.neighbours[i].beacon;
         var bb = b.neighbours[i].beacon;
         var mm = new Beacon(xTr(bb), yTr(bb), zTr(bb));
 
-        log(i, aa.toString().padStart(20), mm.toString().padStart(20), mm.asString(aa.x - mm.x, aa.y - mm.y, aa.z - mm.z));
-
+        log(
+          i,
+          aa.toString().padStart(20),
+          mm.toString().padStart(20),
+          mm.asString(aa.x - mm.x, aa.y - mm.y, aa.z - mm.z),
+        );
       }
-      const matched = targetBeacons.filter(other => source.hasBeacon(other));
+      const matched = targetBeacons.filter((other) => source.hasBeacon(other));
       log("can match ", matched);
       if (matched.length >= 12) {
         this.merge(targetBeacons, a, b, xTr, yTr, zTr, source, target, scanner);
@@ -284,53 +309,79 @@ class Puzzle {
     return current;
   }
 
-  private merge(targetBeacons: Beacon[], a: Beacon, b: Beacon, xTr: mappingFunction, yTr: mappingFunction, zTr: mappingFunction, source: Scanner, target: Scanner, scanner: { x: number, y: number, z: number, name: string }) {
-    var m = new Beacon(xTr(b), yTr(b), zTr(b))
+  private merge(
+    targetBeacons: Beacon[],
+    a: Beacon,
+    b: Beacon,
+    xTr: mappingFunction,
+    yTr: mappingFunction,
+    zTr: mappingFunction,
+    source: Scanner,
+    target: Scanner,
+    scanner: { x: number; y: number; z: number; name: string },
+  ) {
+    var m = new Beacon(xTr(b), yTr(b), zTr(b));
     source.merged.push(scanner);
     target.merged.forEach(({ x, y, z, name }) => {
       var s = new Beacon(x, y, z);
-      source.merged.push({ x: xTr(s), y: yTr(s), z: zTr(s), name })
+      source.merged.push({ x: xTr(s), y: yTr(s), z: zTr(s), name });
     });
-    const toBeAdded = targetBeacons.filter(other => !source.hasBeacon(other));
-    toBeAdded.forEach(tba => { tba.scanner = source; });
+    const toBeAdded = targetBeacons.filter((other) => !source.hasBeacon(other));
+    toBeAdded.forEach((tba) => {
+      tba.scanner = source;
+    });
     source.beacons = [...source.beacons, ...toBeAdded];
-    log(`added ${toBeAdded.length} beacons to ${source.name} from ${target.name}`);
+    log(
+      `added ${toBeAdded.length} beacons to ${source.name} from ${target.name}`,
+    );
     source.getClosest();
     source.sortNeighbours();
 
-    var remove = this.scanners.findIndex(scanner => scanner === target);
-    this.scanners = [...this.scanners.slice(0, remove), ...this.scanners.slice(remove + 1)];
+    var remove = this.scanners.findIndex((scanner) => scanner === target);
+    this.scanners = [
+      ...this.scanners.slice(0, remove),
+      ...this.scanners.slice(remove + 1),
+    ];
   }
 
-  private validateCandidates(beaconMap: { [hash: number]: Beacon[]; }, criteria: number) {
+  private validateCandidates(
+    beaconMap: { [hash: number]: Beacon[] },
+    criteria: number,
+  ) {
     var checkedList: Beacon[][] = [];
-    Object.values(beaconMap).filter(m => m.length > 1).forEach(([a, b]) => {
-      var checked = true;
-      for (var i = 0; i < criteria + 1; i++) {
-        if (a.neighbours[i].distance !== b.neighbours[i].distance) {
-          checked = false;
-          break;
+    Object.values(beaconMap)
+      .filter((m) => m.length > 1)
+      .forEach(([a, b]) => {
+        var checked = true;
+        for (var i = 0; i < criteria + 1; i++) {
+          if (a.neighbours[i].distance !== b.neighbours[i].distance) {
+            checked = false;
+            break;
+          }
         }
-      }
-      if (checked) {
-        checkedList.push([a, b]);
-      }
-    });
+        if (checked) {
+          checkedList.push([a, b]);
+        }
+      });
     return checkedList;
   }
 
   private findCandidatesUsingNearestNeighbourHashes(criteria: number) {
     var matches = 0;
-    var beaconMap: { [hash: number]: Beacon[]; } = {};
+    var beaconMap: { [hash: number]: Beacon[] } = {};
     while (matches === 0 && criteria > 1) {
       beaconMap = {};
-      this.scanners.forEach(s => s.createHashes(criteria));
+      this.scanners.forEach((s) => s.createHashes(criteria));
       for (var scanner of this.scanners) {
         for (var beacon of scanner.beacons) {
           if (beaconMap[beacon.neighbourHash]) {
             matches++;
             beaconMap[beacon.neighbourHash].push(beacon);
-            log(`${criteria}: found one between Scanner ${scanner.name} and ${beaconMap[beacon.neighbourHash][0].scanner!.name}`);
+            log(
+              `${criteria}: found one between Scanner ${scanner.name} and ${
+                beaconMap[beacon.neighbourHash][0].scanner!.name
+              }`,
+            );
           } else {
             if (!this.banned.includes(beacon.neighbourHash)) {
               beaconMap[beacon.neighbourHash] = [beacon];
@@ -341,29 +392,30 @@ class Puzzle {
       criteria--;
     }
 
-
     return { criteria, beaconMap };
   }
 
   public solve() {
     var result = 0;
-    this.scanners.forEach(s => {
+    this.scanners.forEach((s) => {
       s.getClosest();
       s.sortNeighbours();
     });
     var iteration = 0;
     while (this.scanners.length > 1 && iteration < 30) {
-      this.findAndMergeScannerPairs()
-      log(iteration, "scanners left: ", this.scanners.length)
+      this.findAndMergeScannerPairs();
+      log(iteration, "scanners left: ", this.scanners.length);
       iteration++;
     }
 
-    var scanners = this.scanners[0].merged.map(({ x, y, z }) => new Beacon(x, y, z));
+    var scanners = this.scanners[0].merged.map(
+      ({ x, y, z }) => new Beacon(x, y, z),
+    );
     scanners.push(new Beacon(0, 0, 0));
     var notdone: Beacon[] = [...scanners];
     var max = 0;
     for (var a of scanners) {
-      var remove = notdone.findIndex(x => x === a);
+      var remove = notdone.findIndex((x) => x === a);
       notdone = [...notdone.slice(0, remove), ...notdone.slice(remove + 1)];
       for (var b of notdone) {
         var distance = a.getManhattenDistance(b);
@@ -373,23 +425,27 @@ class Puzzle {
       }
     }
 
-
-
     return { part1: this.scanners[0].beacons.length, part2: max };
   }
 }
 debug = false;
 const parseInput = (rawInput: string) => {
-  var scanners = rawInput
-    .replace(/\r\n/g, '\n')
-    .split(/\n\n/g);
+  var scanners = rawInput.replace(/\r\n/g, "\n").split(/\n\n/g);
 
-  var puzzle: Scanner[] = scanners.map(s => s.split(/\n/g)).map(([name, ...beacons]) =>
-    new Scanner(name, beacons.map(beacon => beacon.split(/,/g).map(a => parseInt(a))).map(([x, y, z]) => new Beacon(x, y, z))));
+  var puzzle: Scanner[] = scanners
+    .map((s) => s.split(/\n/g))
+    .map(
+      ([name, ...beacons]) =>
+        new Scanner(
+          name,
+          beacons
+            .map((beacon) => beacon.split(/,/g).map((a) => parseInt(a)))
+            .map(([x, y, z]) => new Beacon(x, y, z)),
+        ),
+    );
 
   return new Puzzle(puzzle).solve();
-}
-
+};
 
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);

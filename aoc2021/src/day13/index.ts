@@ -1,13 +1,10 @@
 import run from "aocrunner";
 const unique = <T extends Object>(value: T, index: number, self: T[]) => {
-  var first = self.findIndex(p => p.toString() === value.toString());
+  var first = self.findIndex((p) => p.toString() === value.toString());
   return first === index;
-}
+};
 class Instruction {
-  constructor(
-    private direction: 'x' | 'y',
-    private position: number,
-  ) { }
+  constructor(private direction: "x" | "y", private position: number) {}
 
   public getDirection() {
     return this.direction;
@@ -21,11 +18,7 @@ class Instruction {
   }
 }
 class Point {
-
-  constructor(
-    private x: number,
-    private y: number,
-  ) { }
+  constructor(private x: number, private y: number) {}
 
   public getX() {
     return this.x;
@@ -57,27 +50,27 @@ class Point {
     return this.toString() === b.toString();
   }
 }
-Point.prototype.toString = function () { return `[${this.getX()},${this.getY()}]` };
-Point.prototype.equals = function (b: Point) { return this.toString() === b.toString(); };
-
+Point.prototype.toString = function () {
+  return `[${this.getX()},${this.getY()}]`;
+};
+Point.prototype.equals = function (b: Point) {
+  return this.toString() === b.toString();
+};
 
 class Page {
-
-  constructor(
-    private page: Point[]
-  ) { }
+  constructor(private page: Point[]) {}
 
   public clone(): Page {
-    return new Page(this.page.map(point => point.clone()));
+    return new Page(this.page.map((point) => point.clone()));
   }
 
   public foldX(position: number) {
-    this.page.forEach(point => point.translateX(position));
+    this.page.forEach((point) => point.translateX(position));
     this.page = this.page.filter(unique);
   }
 
   public foldY(position: number) {
-    this.page.forEach(point => point.translateY(position));
+    this.page.forEach((point) => point.translateY(position));
     this.page = this.page.filter(unique);
   }
 
@@ -86,52 +79,55 @@ class Page {
   }
 
   public toString(): string {
-    var maxX = Math.max(...this.page.map(point => point.getX()));
-    var maxY = Math.max(...this.page.map(point => point.getY()));
+    var maxX = Math.max(...this.page.map((point) => point.getX()));
+    var maxY = Math.max(...this.page.map((point) => point.getY()));
     var p = new Array(maxY + 1).fill([]);
     p = p.map((r) => {
-      return new Array(maxX + 1).fill(' ');
+      return new Array(maxX + 1).fill(" ");
     });
-    this.page.forEach(point => {
+    this.page.forEach((point) => {
       if (p[point.getY()][point.getX()] === String.fromCharCode(9608)) {
-        p[point.getY()][point.getX()] = '2';
+        p[point.getY()][point.getX()] = "2";
       } else {
         p[point.getY()][point.getX()] = String.fromCharCode(9608);
       }
     });
-    return p.map(r => console.log(r.join(""))).join(`\n`);
+    return p.map((r) => console.log(r.join(""))).join(`\n`);
   }
 }
 
 const regExp = /^fold along (\w)=(\d+)$/;
-const parseDirection = (direction: string): 'x' | 'y' => {
-  if (direction === 'x' || direction === 'y') {
+const parseDirection = (direction: string): "x" | "y" => {
+  if (direction === "x" || direction === "y") {
     return direction;
   }
   throw new Error(`no such direction ${direction}`);
-}
+};
 
 const parseInput = (rawInput: string) => {
-  var [page, instructions] = rawInput
-    .replace(/\r\n/g, '\n')
-    .split(/\n\n/g);
+  var [page, instructions] = rawInput.replace(/\r\n/g, "\n").split(/\n\n/g);
 
-  var inputPage = page.split(/\n/)
-    .map(p => p.split(',').map(a => parseInt(a, 10)))
+  var inputPage = page
+    .split(/\n/)
+    .map((p) => p.split(",").map((a) => parseInt(a, 10)))
     .map(([x, y]) => new Point(x, y));
 
-  var inputInstructions = instructions.split(/\n/)
-    .map(s => regExp.exec(s))
-    .map(s => s || ["", "X", "10"])
-    .map(([, direction, position]) => (new Instruction(parseDirection(direction), parseInt(position, 10))))
+  var inputInstructions = instructions
+    .split(/\n/)
+    .map((s) => regExp.exec(s))
+    .map((s) => s || ["", "X", "10"])
+    .map(
+      ([, direction, position]) =>
+        new Instruction(parseDirection(direction), parseInt(position, 10)),
+    );
 
   return { page: new Page(inputPage), instructions: inputInstructions };
-}
+};
 
 const part1 = (rawInput: string) => {
   const { instructions, page } = parseInput(rawInput);
   var instruction = instructions[0];
-  if (instruction.getDirection() === 'x') {
+  if (instruction.getDirection() === "x") {
     page.foldX(instruction.getPosition());
   } else {
     page.foldY(instruction.getPosition());
@@ -143,8 +139,8 @@ const part1 = (rawInput: string) => {
 const part2 = (rawInput: string) => {
   const { instructions, page } = parseInput(rawInput);
 
-  instructions.forEach(instruction => {
-    if (instruction.getDirection() === 'x') {
+  instructions.forEach((instruction) => {
+    if (instruction.getDirection() === "x") {
       page.foldX(instruction.getPosition());
     } else {
       page.foldY(instruction.getPosition());
