@@ -1,4 +1,7 @@
 import run from "aocrunner";
+import * as Logger from "bunyan";
+
+var log = Logger.createLogger({ name: "2021 day4", level: "warn" });
 
 const parseInput = (rawInput: string) => {
   return rawInput
