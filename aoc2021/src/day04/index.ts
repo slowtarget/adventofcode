@@ -1,5 +1,25 @@
 import run from "aocrunner";
+import * as Logger from 'bunyan';
+var log = Logger.createLogger({name: "2021 day4", level:'warn'});
+log.fatal({level:log.level(), logfields:log.fields},`log level `)
 // much from https://refactoring.guru/design-patterns/observer/typescript/example
+
+
+// a number is drawn (number state --> DRAWN)
+// all the lines the number appears on are updated (+1 to number of draws)
+// all the cards the number appears on are updated (reducing the sum)
+// if any lines have won (draws===5) ( line state --> WON )
+// the card it appears on has won ( card state --> WON ) (detaches from numbers)
+// the lines on the winning card are withdrawn ( line state --> WITHDRAWN ) (detaches from numbers)
+
+// lines observe numbers for DRAWN
+// cards observe numbers for DRAWN
+// cards observe lines for WON
+// lines observe cards for WON (to withdraw losing lines from winning cards)
+// numbers observe lines for WITHDRAWN
+// numbers observe cards for WON
+// game observes cards for WON
+
 
 /**
  * The Subject interface declares a set of methods for managing subscribers.
@@ -25,8 +45,13 @@ abstract class AbstractSubject implements Subject {
     * @type {number} For the sake of simplicity, the Subject's state, essential
     * to all subscribers, is stored in this variable.
     */
+    public identity: string,
     public state: number
   ) { }
+
+  public getIdentity(): string {
+    return this.identity;
+  }
 
   /**
    * @type {Observer[]} List of subscribers. In real life, the list of
@@ -41,7 +66,7 @@ abstract class AbstractSubject implements Subject {
   public attach(observer: Observer): void {
     const isExist = this.observers.includes(observer);
     if (isExist) {
-      return console.log('Subject: Observer has been attached already.');
+      return log.warn('Subject: Observer has been attached already.');
     }
 
     this.observers.push(observer);
@@ -50,7 +75,7 @@ abstract class AbstractSubject implements Subject {
   public detach(observer: Observer): void {
     const observerIndex = this.observers.indexOf(observer);
     if (observerIndex === -1) {
-      return console.log('Subject: Nonexistent observer.');
+      return log.warn(`detach subject: ${this.identity} Nonexistent observer. ${observer.getIdentity()}`);
     }
     this.observers.splice(observerIndex, 1);
   }
@@ -59,7 +84,8 @@ abstract class AbstractSubject implements Subject {
    * Trigger an update in each subscriber.
    */
   public notify(): void {
-    for (const observer of this.observers) {
+    var observers = [...this.observers]; // iterate over a copy just in case it gets mutated by one of the updates causing a detach...
+    for (const observer of observers) {
       observer.update(this);
     }
   }
@@ -71,6 +97,17 @@ abstract class AbstractSubject implements Subject {
 interface Observer {
   // Receive update from subject.
   update(subject: Subject): void;
+  getIdentity(): string;
+}
+
+abstract class AbstractObserver implements Observer {
+  constructor(
+    public identity: string
+  ) { }
+  abstract update(subject: Subject): void;
+  public getIdentity() {
+    return this.identity;
+  }
 }
 
 /**
@@ -85,12 +122,15 @@ enum BingoNumberState {
 class BingoNumber extends AbstractSubject implements Observer {
   // each number is listened to by the lines containing the number
   // each number is listening for lines to be withdrawn
+  // each number is listened to by the cards containing the number
+  // each number is listening for cards to be won
   constructor(public value: number) {
-    super(BingoNumberState.NOT_DRAWN);
+    super(`number ${value.toString().padStart(2)}`, BingoNumberState.NOT_DRAWN);
   }
 
   public draw(): void {
     this.state = BingoNumberState.DRAWN;
+    log.info(` ${this.identity} drawn `.padStart(40, "-").padEnd(80, "-"));
     this.notify();
   }
 
@@ -98,6 +138,7 @@ class BingoNumber extends AbstractSubject implements Observer {
     if ((subject instanceof BingoLine && subject.state === BingoState.WITHDRAWN) ||
       (subject instanceof BingoCard && subject.state === BingoState.WON)) {
       this.detach(subject); // this ensures that losing lines on winning cards don't carry on playing and that the winning sum is preserved
+      log.trace(`update - ${this.identity} detaching ${subject.identity}`)
     }
 
   }
@@ -114,20 +155,24 @@ class BingoLine extends AbstractSubject implements Observer {
   // when 5 have been drawn that line wins 
   public drawn: number = 0;
   public winningDraw: number | undefined;
-  constructor() {
-    super(BingoState.NOT_WON)
+  constructor(
+    public identity: string
+  ) {
+    super(identity, BingoState.NOT_WON)
   }
 
   public update(subject: Subject): void {
     if (subject instanceof BingoNumber && subject.state === BingoNumberState.DRAWN) {
       this.drawn++;
       if (this.drawn === 5) {
+        log.info(`update - ${this.identity} has won due to ${subject.identity} being drawn`);
         this.state = BingoState.WON;
         this.winningDraw = subject.value;
         this.notify();
       }
     } else if (subject instanceof BingoCard && subject.state === BingoState.WON && this.state === BingoState.NOT_WON) {
       this.state = BingoState.WITHDRAWN;
+      log.trace(`update - ${this.identity} is withdrawn due to ${subject.identity} winning`);
       this.notify();
     }
   }
@@ -143,16 +188,19 @@ class BingoCard extends AbstractSubject implements Observer {
     public cardNumber: number,
     public sum: number,
   ) {
-    super(BingoState.NOT_WON)
+    super(`card ${cardNumber.toString().padStart(2)}`, BingoState.NOT_WON)
   }
 
   public update(subject: Subject): void {
-    if (subject instanceof BingoLine && subject.state === BingoState.WON) {
+    if (subject instanceof BingoLine && subject.state === BingoState.WON && this.state === BingoState.NOT_WON) {
+      log.info(`update - ${this.identity} has won due to ${subject.identity} winning`);
       this.state = BingoState.WON;
       this.winningDraw = subject.winningDraw;
       this.notify();
     } else if (subject instanceof BingoNumber && subject.state === BingoNumberState.DRAWN) {
+
       this.sum -= subject.value;
+      log.trace(`update - ${this.identity} sum: ${this.sum} (subtracted ${subject.identity})`);
     }
   }
 }
@@ -168,7 +216,7 @@ class DrawSupplier {
     return this.drawn[this.idx++];
   }
 }
-class BingoGame implements Observer {
+class BingoGame extends AbstractObserver {
   firstWinner: BingoCard | undefined;
   lastWinner: BingoCard | undefined;
   wins: number = 0;
@@ -178,11 +226,12 @@ class BingoGame implements Observer {
     public cards: number,
     public bingoNumberMap: { [key: number]: BingoNumber }
   ) {
+    super('the game');
     this.drawer = new DrawSupplier(drawn);
   }
-
   public update(subject: Subject): void {
     if (subject instanceof BingoCard && subject.state === BingoState.WON) {
+      log.info(`update - ${this.identity} ${subject.identity} has won`);
       this.wins++;
       this.lastWinner = subject;
       if (!this.firstWinner) {
@@ -190,6 +239,7 @@ class BingoGame implements Observer {
       }
     }
   }
+
   public play() {
     while (this.wins < this.cards) {
       var draw = this.drawer.next();
@@ -202,11 +252,12 @@ class BingoGame implements Observer {
 
 class BingoLineBuilder {
   constructor(
+    public identity: string,
     public values: number[],
     public bingoNumberMap: { [key: number]: BingoNumber }
   ) { }
   build() {
-    var line = new BingoLine();
+    var line = new BingoLine(this.identity);
     this.values.map(value => this.bingoNumberMap[value]).forEach(bingoNumber => {
       bingoNumber.attach(line);
       line.attach(bingoNumber);
@@ -233,7 +284,7 @@ class BingoCardBuilder {
       ...this.values,
       //cols
       ...this.values[0].map((x, col) => this.values.map(row => row[col]))
-    ].map(line => new BingoLineBuilder(line, this.bingoNumberMap).build())
+    ].map((line, i) => new BingoLineBuilder(`${this.cardNumber} line ${i}`, line, this.bingoNumberMap).build())
       .forEach(line => {
         line.attach(card);
         card.attach(line);
@@ -271,18 +322,20 @@ const parseInput = (rawInput: string) => {
 
   const [drawnInput, ...boardsInput] = rawInput.replace(/\r\n/g, '\n').split('\n\n');
   const drawn = drawnInput.split(',').map(x => parseInt(x, 10));
-  const boardsParsed: number[][][] = boardsInput.map(board => board.split(/\n/).map(l => l.trim().split(/\s+/g).map(x => parseInt(x, 10))));
-  var game = new BingoGameBuilder(drawn, boardsParsed).build();
+  const boards: number[][][] = boardsInput.map(board => board.split(/\n/).map(l => l.trim().split(/\s+/g).map(x => parseInt(x, 10))));
+  var game = new BingoGameBuilder(drawn, boards).build();
   game.play();
   return game;
 };
 
 const part1 = (rawInput: string): number => {
+  log.info(" part 1 ".padStart(40, "#").padEnd(80, "#"));
   const game = parseInput(rawInput);
   return (game.firstWinner?.sum ?? 0) * (game.firstWinner?.winningDraw ?? 0);
 };
 
 const part2 = (rawInput: string) => {
+  log.info(" part 2 ".padStart(40, "#").padEnd(80, "#"));
   const game = parseInput(rawInput);
   return (game.lastWinner?.sum || 0) * (game.lastWinner?.winningDraw ?? 0);
 };

@@ -18,7 +18,10 @@
     "aocrunner": "^1.6.1",
     "prettier": "^2.4.1"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@types/bunyan": "^1.8.8",
+    "bunyan": "^1.8.15"
+  },
   "engines": {
     "node": ">=16.13.0"
   }
