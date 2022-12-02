@@ -16,15 +16,15 @@ const S = "S";
 type Shape = "R" | "P" | "S";
 type Outcome = "W" | "L" | "D";
 
-const playMap : Record<string, Shape> = {A:R, B:P,C:S};
+const playMap: Record<string, Shape> = { A: R, B: P, C: S };
 
-const responseMap : Record<string, Shape> = {X:R, Y:P,Z:S};
+const responseMap: Record<string, Shape> = { X: R, Y: P, Z: S };
 
-const outcomeMap : Record<string, Outcome> = {X:"L", Y:"D",Z:"W"};
+const outcomeMap: Record<string, Outcome> = { X: "L", Y: "D", Z: "W" };
 
 const shapeScore: Record<Shape, number> = { R: 1, P: 2, S: 3 };
 
-const outcomeScore: Record<Outcome, number> = {W:6, D:3, L:0};
+const outcomeScore: Record<Outcome, number> = { W: 6, D: 3, L: 0 };
 
 const outcomePicker: Record<Shape, Record<Shape, Outcome>> = {
   R: { R: "D", P: "W", S: "L" },
@@ -46,7 +46,7 @@ const part1 = (rawInput: string) => {
       const play = playMap[playIn];
       const response = responseMap[responseIn];
 
-      const outcome : Outcome = outcomePicker[play][response]
+      const outcome: Outcome = outcomePicker[play][response];
       const score = outcomeScore[outcome] + shapeScore[response];
       return score;
     })
@@ -59,7 +59,7 @@ const part2 = (rawInput: string) => {
   const result = input
     .map((round) => {
       const [playIn, outcomeIn] = round;
-      
+
       const play = playMap[playIn];
       const outcome = outcomeMap[outcomeIn];
 
