@@ -17,7 +17,8 @@ const part2 = (rawInput: string) => {
 
   const result = input.map(s => s.reduce((p, c) => p + Number(c), 0))
       .sort((a, b) => b - a)
-      .slice(0,3).reduce((p,c)=>p+c,0);
+      .slice(0,3)
+      .reduce((p,c)=>p+c,0);
 
   return result;
 };
