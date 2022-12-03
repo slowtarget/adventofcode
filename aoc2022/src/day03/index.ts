@@ -5,29 +5,38 @@ const parseInput = (rawInput: string) => {
 };
 // Lowercase item types a through z have priorities 1 through 26.
 // Uppercase item types A through Z have priorities 27 through 52.
-//  UTF-16 A-Z: 65-90 a-z: 97-122 
+// UTF-16 A-Z: 65-90 a-z: 97-122
 
 const getPriority = (utf16: number) => {
   if (utf16 > 90) {
     return utf16 - 97 + 1;
   }
   return utf16 - 65 + 27;
-}
+};
+
+const getCandidates = (line: string) => {
+  let candidates = new Array<boolean>(53);
+  for (let i = 0; i < line.length; i++) {
+    const priority = getPriority(line.charCodeAt(i));
+    candidates[priority] = true;
+  }
+  return [...candidates];
+};
+
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
-  let result = input.map(line => {
-    let charsUsed = new Array<boolean>(53);
-    let first = line.length / 2;
-    for (let i = 0;   i <  first; i++) {
-      charsUsed[getPriority(line.charCodeAt(i))] = true;
-    }
-    let i = first;
-    while (i < line.length && charsUsed[getPriority(line.charCodeAt(i))] === undefined) {
-      i++;
-    }
-    return getPriority(line.charCodeAt(i));
-  })
-  .reduce((p,c)=>p+c,0);
+  let result = input
+    .map((line) => {
+      let parts = [line.substring(0, line.length / 2), line.substring(line.length / 2)];
+      let candidates = parts.map(getCandidates);
+      for (let i = 0; i < 53; i++) {
+        if (candidates.every((candidate) => candidate[i])) {
+          return i;
+        }
+      }
+      return 0;
+    })
+    .reduce((p, c) => p + c, 0);
 
   return result;
 };
@@ -35,27 +44,24 @@ const part1 = (rawInput: string) => {
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
 
-
-  let result = 0;
-  for (let group = 0; group < input.length / 3; group++) {
-    let charCandidates = new Array<boolean>(53);
-    let charCandidates2 = new Array<boolean>(53);
-    const line1 = input[group * 3 + 0];
-    const line2 = input[group * 3 + 1];
-    const line3 = input[group * 3 + 2];
-    for (let i = 0;   i <  line1.length; i++) {
-      charCandidates[getPriority(line1.charCodeAt(i))] = true;
-    }
-    for (let i = 0;   i <  line2.length; i++) {
-      const priority = getPriority(line2.charCodeAt(i));
-      charCandidates2[priority] = charCandidates[priority];
-    }
-    let i = 0;
-    while (i < line3.length && charCandidates2[getPriority(line3.charCodeAt(i))] === undefined) {
-      i++;
-    }
-    result += getPriority(line3.charCodeAt(i));
+  const groups = [];
+  const groupSize = 3;
+  for (let i = 0; i < input.length; i += groupSize) {
+    groups.push(input.slice(i, i + groupSize));
   }
+
+  let result = groups
+    .map((group) => {
+      let candidates = group.map((line) => getCandidates(line));
+
+      for (let i = 0; i < 53; i++) {
+        if (candidates.every((candidate) => candidate[i])) {
+          return i;
+        }
+      }
+      return 0;
+    })
+    .reduce((p, c) => p + c, 0);
 
   return result;
 };
@@ -73,7 +79,7 @@ run({
     tests: [
       {
         input: testInput,
-        expected: 157,
+        expected: 157, 
       },
     ],
     solution: part1,
