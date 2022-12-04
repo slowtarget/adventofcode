@@ -6,6 +6,7 @@ const parseInput = (rawInput: string) => {
 // Lowercase item types a through z have priorities 1 through 26.
 // Uppercase item types A through Z have priorities 27 through 52.
 // UTF-16 A-Z: 65-90 a-z: 97-122
+const priorities = [...Array.from({ length: 52 }, (_, i) => i + 1)]; // [1,2,3, ... 52]
 
 const getPriority = (utf16: number) => {
   if (utf16 > 90) {
@@ -23,18 +24,33 @@ const getCandidates = (line: string) => {
   return [...candidates];
 };
 
+const chunk = <T>(size: number, list: T[]): T[][] => {
+  const start: T[][] = [];
+  return list.reduce((acc, curr, i, self) => {
+    if (!(i % size)) {
+      return [...acc, self.slice(i, i + size)];
+    }
+    return acc;
+  }, start);
+};
+
+function allPresent(candidates: boolean[][]): (value: number, index: number, obj: number[]) => unknown {
+  return (i) => candidates.every((candidate) => candidate[i]);
+}
+
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
   let result = input
     .map((line) => {
-      let parts = [line.substring(0, line.length / 2), line.substring(line.length / 2)];
+      let parts = [
+        line.substring(0, line.length / 2),
+        line.substring(line.length / 2),
+      ];
       let candidates = parts.map(getCandidates);
-      for (let i = 0; i < 53; i++) {
-        if (candidates.every((candidate) => candidate[i])) {
-          return i;
-        }
-      }
-      return 0;
+      return (
+        priorities.find((i) => candidates.every((candidate) => candidate[i])) ||
+        0
+      );
     })
     .reduce((p, c) => p + c, 0);
 
@@ -44,22 +60,13 @@ const part1 = (rawInput: string) => {
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
 
-  const groups = [];
-  const groupSize = 3;
-  for (let i = 0; i < input.length; i += groupSize) {
-    groups.push(input.slice(i, i + groupSize));
-  }
-
-  let result = groups
+  let result = chunk(3, input)
     .map((group) => {
       let candidates = group.map((line) => getCandidates(line));
-
-      for (let i = 0; i < 53; i++) {
-        if (candidates.every((candidate) => candidate[i])) {
-          return i;
-        }
-      }
-      return 0;
+      return (
+        priorities.find(allPresent(candidates)) ||
+        0
+      );
     })
     .reduce((p, c) => p + c, 0);
 
@@ -79,7 +86,7 @@ run({
     tests: [
       {
         input: testInput,
-        expected: 157, 
+        expected: 157,
       },
     ],
     solution: part1,
@@ -94,5 +101,6 @@ run({
     solution: part2,
   },
   trimTestInputs: true,
-  onlyTests: false,
+  onlyTests: true,
 });
+
