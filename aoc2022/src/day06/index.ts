@@ -11,7 +11,9 @@ const solve = (rawInput: string, target: number) => {
     track.push(input.charAt(i));
     if (track.length > target) {
       track = track.slice(1);
-      const unique = new Set(track);
+    }
+    if (track.length === target) {
+      const unique = new Set<string>(track);
       if (unique.size === target) {
         return i + 1;
       }
