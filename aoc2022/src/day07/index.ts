@@ -97,13 +97,7 @@ const part2 = (rawInput: string) => {
   const used = dir.getSize();
   const unused = totalDiskSpace - used;
   const extraNeeded = freeSpaceRequired - unused;
-  console.log(
-    "dirs ",
-    [dir, ...dir.getDirList()]
-      .map((d) => d.getSize())
-      .filter((d) => d >= extraNeeded)
-      .sort(),
-  );
+
   return [dir, ...dir.getDirList()]
     .map((d) => d.getSize())
     .filter((d) => d >= extraNeeded)
