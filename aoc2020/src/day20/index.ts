@@ -1,7 +1,7 @@
 import run from "aocrunner";
 import * as Logger from "bunyan";
 
-var log = Logger.createLogger({ name: "2021 day4", level: "warn" });
+const log = Logger.createLogger({ name: "2021 day4", level: "warn" });
 
 class Character {
   static compare(a: Character, b:Character) {
@@ -242,7 +242,4 @@ run({
   trimTestInputs: true,
   onlyTests: false,
 });
-function compare(Character: typeof Character, compare: any) {
-  throw new Error("Function not implemented.");
-}
 

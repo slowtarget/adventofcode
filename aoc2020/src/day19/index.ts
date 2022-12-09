@@ -1,30 +1,98 @@
 import run from "aocrunner";
 import * as Logger from "bunyan";
 
-var log = Logger.createLogger({ name: "2021 day4", level: "warn" });
+const log = Logger.createLogger({ name: "2021 day4", level: "warn" });
 type Rules = { [key: string]: Rule };
+type Evaluation = {evaluation: (Rule)[] , alternate?: (Rule)[]};
+type Resolution = string[];
 interface Rule {
+  resolve(): string[];
   getId(): string;
+  evaluate(rules: Rules): Evaluation;
+  get(rules: Rules): Evaluation ;
 }
-class LetterRule implements Rule {
-  constructor(public id: string, public letter: string) { }
-  getId(): string { return this.id; }
+class BaseRule implements Rule {
+  public evaluated:boolean = false;
+  constructor(private id: string) { }
+  protected ruleKeys: string[] = [];
+  protected letter?: string;
+  protected evaluation: Evaluation = {evaluation:[]}; 
+  protected resolution: string[] = [];
+
+  getId(): string {
+    return this.id;
+  }
+  evaluate(rules: Rules): Evaluation {
+    throw new Error("Method not implemented.");
+  }
+  get(rules: Rules):Evaluation {
+    this.evaluation = this.evaluated ?  this.evaluation : this.evaluate(rules);
+    this.evaluated = true;
+    return this.evaluation;
+  }
+  resolve(): string[] {
+    if (this.letter) {
+      return [this.letter];
+    }
+    const evaluated = this.evaluation.evaluation
+        .map(rule => rule.resolve())
+        .reduce((p, c) => {
+          return p.map(prefix => {
+            return c.map(suffix => prefix + suffix);
+          }).flat();
+        },[""] );
+        const alternate = (this.evaluation.alternate ?? [])
+        .map(rule => rule.resolve())
+        .reduce((p, c) => {
+          return p.map(prefix => {
+            return c.map(suffix => prefix + suffix);
+          }).flat();
+        },[""] );
+    return [...evaluated, ...alternate];
+  }
 }
-class PairRule implements Rule {
-  constructor(public id: string, public rule1: string, public rule2: string) { }
-  getId(): string { return this.id; }
+
+class LetterRule extends BaseRule {
+  constructor( id: string, letter: string) {
+    super(id)
+    this.letter = letter;
+   }
+  evaluate() {return {evaluation:[this]}}
 }
-class EitherPairRule implements Rule {
-  constructor(public id: string, public pair1: PairRule, public pair2: PairRule) { }
-  getId(): string { return this.id; }
+class PairRule extends BaseRule {
+  rule1(rule1: any, arg1: number) {
+    throw new Error("Method not implemented.");
+  }
+  rule2(rule2: any, arg1: number) {
+    throw new Error("Method not implemented.");
+  }
+  constructor( id: string,  rule1: string,  rule2: string) {
+    super(id);
+    this.ruleKeys = [rule1, rule2];
+   }
+  evaluate(rules: Rules) {
+    return {evaluation:this.ruleKeys.map(key => rules[key])};
+  }
 }
-class SingleRule implements Rule {
-  constructor(public id: string, public ruleId: string) { }
-  getId(): string { return this.id; }
+class EitherPairRule extends BaseRule {
+  constructor(id: string, private pair1: PairRule, private pair2: PairRule) {
+    super(id);
+   }
+  evaluate(rules: Rules) {
+    return {evaluation: [this.pair1], alternate: [this.pair2]};
+  }
 }
-class TripletRule implements Rule {
-  constructor(public id: string, public rule1: string,  public rule2: string,  public rule3: string) { }
-  getId(): string { return this.id; }
+class SingleRule extends BaseRule {
+  constructor(id: string, private ruleId: string) {  super(id);}
+  evaluate(rules: Rules) {
+    return {evaluation: [rules[this.ruleId]]};
+  }
+}
+class TripletRule extends BaseRule {
+  constructor(id: string, private rule1: string, private rule2: string,  private rule3: string) { super(id); }
+  evaluate(rules: Rules) {
+    return {evaluation: [rules[this.rule1],rules[this.rule2],rules[this.rule3]]};
+  }
 }
 const parseInput = (rawInput: string) => {
   const [rulesInput, messages] = rawInput
@@ -32,20 +100,22 @@ const parseInput = (rawInput: string) => {
     .split(/\n\n/g).map(section => section.split(/\n/g).map(line=>line.trim()));
   const regex = /^(\d+): (?:"(\w)"|(?:(\d+) (\d+))|(?:(\d+) (\d+) \| (\d+) (\d+))|(\d+)|(?:(\d+) (\d+) (\d+)))$/
 
-  var rules: Rules = {};
+  let rules: Rules = {};
 
-  rulesInput.map(ruleInput => {
-    var matches = regex.exec(ruleInput);
+  const rulesList = rulesInput.map(ruleInput => {
+    let matches = regex.exec(ruleInput);
     if (matches == null) {
       throw new Error(`null! could not parse ${ruleInput}`)
     }
-    var [, id, letter, p1, p2, e1, e2, f1, f2, x1, t1, t2, t3] = matches;
+    let [, id, letter, p1, p2, e1, e2, f1, f2, x1, t1, t2, t3] = matches;
     if (letter !== undefined) {
       return new LetterRule(id, letter)
     } else if (p1 !== undefined) {
       return new PairRule(id, p1, p2);
     } else if (e1 !== undefined) {
-      return new EitherPairRule(id, new PairRule(`${id}_a`, e1, e2), new PairRule(`${id}_a`, f1, f2));
+      const ruleA = new PairRule(`${id}_a`, e1, e2);
+      const ruleB = new PairRule(`${id}_b`, f1, f2);
+      return [new EitherPairRule(id, ruleA, ruleB ), ruleA, ruleB];
     } else if (x1 !== undefined) {
       return new SingleRule(id, x1)
     } else if (t1 !== undefined) {
@@ -53,57 +123,32 @@ const parseInput = (rawInput: string) => {
     } else {
       throw new Error(`could not parse ${ruleInput} : ${matches}`)
     }
-  }).forEach(rule => {
-    rules[rule.getId()] = rule;
+  }).flat();
+  rulesList.forEach(rule => {
+    rules[rule.getId()] = rule ;
   });
-
-  Object.values(rules).filter(rule=>rule instanceof EitherPairRule).forEach(ep=>{
-    if (ep instanceof EitherPairRule) {
-      rules[ep.pair1.getId()] = ep.pair1;
-      rules[ep.pair2.getId()] = ep.pair2;
-    }
+  
+  
+  rulesList.forEach(rule => {
+    rule.get(rules);
   });
 
   return { rules, messages };
 }
 // return an array of possibles
 class RulesEngine {
+
   constructor(public rules: Rules, public message: string) { }
+  public valid: string[] = [];
 
-  validate() {
-    return this.buildTargetFromRule("0", 0).includes(this.message);
-  }
-
-  buildTargetFromRule(ruleId: string, depth: number): string[] {
-    var rule = this.rules[ruleId];
-    if (rule instanceof LetterRule) {
-      return [`${rule.letter}`];
-    } else if (rule instanceof PairRule) {
-      var rule1s = this.buildTargetFromRule(rule.rule1, depth + 1);
-      var rule2s = this.buildTargetFromRule(rule.rule2, depth + 1);
-      return rule1s.map(rule1 => rule2s.map(rule2 => `${rule1}${rule2}`)).flatMap(a => a);
-    } else if (rule instanceof EitherPairRule) {
-      return [this.buildTargetFromRule(rule.pair1.getId(), depth + 1), this.buildTargetFromRule(rule.pair2.getId(), depth + 1)].flatMap(a => a);
-    } else if (rule instanceof SingleRule) {
-      return [this.buildTargetFromRule(rule.ruleId, depth + 1)].flatMap(a => a);
-    } else if (rule instanceof TripletRule) {
-      rule1s = this.buildTargetFromRule(rule.rule1, depth + 1);
-      rule2s = this.buildTargetFromRule(rule.rule2, depth + 1);
-      var rule3s = this.buildTargetFromRule(rule.rule3, depth + 1);
-      return rule1s.map(rule1 => rule2s.map(rule2 => rule3s.map(rule3=>`${rule1}${rule2}${rule3}`))).flatMap(a => a).flatMap(a => a);
-    } else {
-      log.error({rule},'invalid rule type');
-      throw new Error(`invalid rule type ${rule} ${ruleId}`);
-    }
-  }
 }
 
-const isValidForRule0 = (rules: Rules, message: string) => {
-  return new RulesEngine(rules, message).validate();
-}
+
 const part1 = (rawInput: string) => {
   const { rules, messages } = parseInput(rawInput);
-  return messages.filter(message => isValidForRule0(rules, message)).length;
+  const allValid = rules["0"].resolve();
+  console.log({allValid});
+  return messages.filter(message => allValid.includes(message)).length;
 };
 
 const part2 = (rawInput: string) => {
@@ -145,5 +190,5 @@ run({
     solution: part2,
   },
   trimTestInputs: true,
-  onlyTests: true,
+  // onlyTests: true,
 });
