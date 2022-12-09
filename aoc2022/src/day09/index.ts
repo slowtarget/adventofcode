@@ -42,10 +42,10 @@ class Rope {
   public x: number = 0;
   public y: number = 0;
   public tail: Tail = new Tail();
-  public rope?: Rope;
+  public extension?: Rope;
   constructor(public length: number) {
     if (length > 1) {
-      this.rope = new Rope(length - 1);
+      this.extension = new Rope(length - 1);
     }
   }
   public move(direction: string, distance: number) {
@@ -53,23 +53,22 @@ class Rope {
     for (let i = 0; i < distance; i++) {
       this.x += dxdy.dx;
       this.y += dxdy.dy;
-      if (!this.tail.touching(this.x, this.y)) {
-        this.tail.moveTowards(this.x, this.y);
-        if (this.rope) {
-          this.rope.moveTo(this.tail.x, this.tail.y);
-        }
+      this.tailWag();
+    }
+  }
+  private tailWag() {
+    if (!this.tail.touching(this.x, this.y)) {
+      this.tail.moveTowards(this.x, this.y);
+      if (this.extension) {
+        this.extension.moveTo(this.tail.x, this.tail.y);
       }
     }
   }
+
   public moveTo(x: number, y: number) {
     this.x = x;
     this.y = y;
-    if (!this.tail.touching(this.x, this.y)) {
-      this.tail.moveTowards(this.x, this.y);
-      if (this.rope) {
-        this.rope.moveTo(this.tail.x, this.tail.y);
-      }
-    }
+    this.tailWag();
   }
 }
 
@@ -98,7 +97,7 @@ const part2 = (rawInput: string) => {
   input.forEach((move) => {
     head.move(move.direction, move.distance);
   });
-  return head.rope?.rope?.rope?.rope?.rope?.rope?.rope?.rope?.tail.visited.size;
+  return head.extension?.extension?.extension?.extension?.extension?.extension?.extension?.extension?.tail.visited.size;
 };
 
 const testInput = `
