@@ -165,6 +165,12 @@ class RulesEngine {
   constructor(public rules: Rules, public message: string) {}
   public valid: string[] = [];
 }
+const match = (candidate: string, input: string, start: number): boolean => {
+  const result =
+    input.length >= start + candidate.length &&
+    input.substring(start, start + candidate.length) === candidate;
+  return result;
+};
 
 const part1 = (rawInput: string) => {
   const { rules, messages } = parseInput(rawInput);
@@ -172,9 +178,7 @@ const part1 = (rawInput: string) => {
   const maxlen = messages
     .map((m) => m.length)
     .reduce((p, c) => Math.max(p, c), 0);
-  // const allValid = rules["0"].resolve();
-  // console.log({"context":"checking messages are valid", valid: allValid.length, messages:messages.length, max:maxlen});
-  // return messages.filter(message => allValid.includes(message)).length;
+
   const resolve42 = rules["42"]?.resolve() ?? [];
   const resolve31 = rules["31"]?.resolve() ?? [];
   console.log({
@@ -184,13 +188,7 @@ const part1 = (rawInput: string) => {
     resolve42,
     maxlen,
   });
-  const match = (candidate: string, input: string, start: number): boolean => {
-    const result =
-      input.length >= start + candidate.length &&
-      input.substring(start, start + candidate.length) === candidate;
-    // console.log({name:"match31", input, length:input.length, start, candidate, result});
-    return result;
-  };
+
   // rule 0: 8 11
   // to match rule 0 we can have any number of 42's followed by at least one 31, but no more 31's than the number of 42's less 1
 
@@ -253,22 +251,7 @@ const part2 = (rawInput: string) => {
     resolve42,
     maxlen,
   });
-  // const rule8a = new ConcatRule("8a", ["42"], rules);
-  // const rule8b = new ConcatRule("8b", ["42", "42"], rules);
-  // const rule8c = new ConcatRule("8c", ["42", "42", "42"], rules);
-  // const rule8d = new ConcatRule("8d", ["42", "42", "42", "42"], rules);
-  // rules["8"] = new AlternativesRule("8", [rule8a, rule8b, rule8c], rules);
-  // const rule11a = new ConcatRule("11a", ["42", "31"], rules);
-  // const rule11b = new ConcatRule("11b", ["42","42", "31", "31"], rules);
-  // const rule11c = new ConcatRule("11c", ["42","42","42", "31", "31", "31"], rules);
-  // rules["11"] = new AlternativesRule("11", [rule11a, rule11b], rules);
-  const match = (candidate: string, input: string, start: number): boolean => {
-    const result =
-      input.length >= start + candidate.length &&
-      input.substring(start, start + candidate.length) === candidate;
-    // console.log({name:"match31", input, length:input.length, start, candidate, result});
-    return result;
-  };
+
   // rule 0: 8 11
   // to match rule 0 we can have any number of 42's followed by at least one 31, but no more 31's than the number of 42's less 1
 
@@ -277,8 +260,8 @@ const part2 = (rawInput: string) => {
   const match31 = (input: string, start: number) =>
     resolve31.find((candidate) => match(candidate, input, start));
 
-  resolve42.forEach((message) =>
-    console.log({ message, inboth: resolve31.includes(message) }),
+  resolve42.filter(message => resolve31.includes(message)).forEach((message) =>
+    console.log({ inboth: message }),
   );
 
   const result = messages
@@ -311,7 +294,6 @@ const part2 = (rawInput: string) => {
         match42Count > 0 &&
         match31Count > 0 &&
         match31Count < match42Count;
-      // console.log({matching, message, match42Count, match31Count, isMatch});
       return isMatch ? 1 : 0;
     })
     .reduce((p, c) => p + c, 0);
