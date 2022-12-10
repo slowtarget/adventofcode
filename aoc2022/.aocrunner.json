@@ -139,16 +139,16 @@
     },
     {
       "part1": {
-        "solved": false,
-        "result": null,
+        "solved": true,
+        "result": "13440",
         "attempts": [],
-        "time": null
+        "time": 0.1658
       },
       "part2": {
         "solved": false,
-        "result": null,
+        "result": "███  ███  ████  ██  ███   ██  ████  ██  \n█  █ █  █    █ █  █ █  █ █  █    █ █  █ \n█  █ ███    █  █    █  █ █  █   █  █  █ \n███  █  █  █   █ ██ ███  ████  █   ████ \n█    █  █ █    █  █ █ █  █  █ █    █  █ \n█    ███  ████  ███ █  █ █  █ ████ █  █ ",
         "attempts": [],
-        "time": null
+        "time": 0.2845
       }
     },
     {
