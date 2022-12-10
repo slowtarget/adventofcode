@@ -34,7 +34,9 @@ const chunk = <T>(size: number, list: T[]): T[][] => {
   }, start);
 };
 
-function allPresent(candidates: boolean[][]): (value: number, index: number, obj: number[]) => unknown {
+function allPresent(
+  candidates: boolean[][],
+): (value: number, index: number, obj: number[]) => unknown {
   return (i) => candidates.every((candidate) => candidate[i]);
 }
 
@@ -63,10 +65,7 @@ const part2 = (rawInput: string) => {
   let result = chunk(3, input)
     .map((group) => {
       let candidates = group.map((line) => getCandidates(line));
-      return (
-        priorities.find(allPresent(candidates)) ||
-        0
-      );
+      return priorities.find(allPresent(candidates)) || 0;
     })
     .reduce((p, c) => p + c, 0);
 
@@ -103,4 +102,3 @@ run({
   trimTestInputs: true,
   onlyTests: true,
 });
-

@@ -104,7 +104,6 @@ const part1 = (rawInput: string) => {
   return sum;
 };
 
-
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
   let cycle = 1;

@@ -97,7 +97,8 @@ const part2 = (rawInput: string) => {
   input.forEach((move) => {
     head.move(move.direction, move.distance);
   });
-  return head.extension?.extension?.extension?.extension?.extension?.extension?.extension?.extension?.tail.visited.size;
+  return head.extension?.extension?.extension?.extension?.extension?.extension
+    ?.extension?.extension?.tail.visited.size;
 };
 
 const testInput = `
