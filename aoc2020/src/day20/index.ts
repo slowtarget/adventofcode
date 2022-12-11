@@ -3,243 +3,382 @@ import * as Logger from "bunyan";
 
 const log = Logger.createLogger({ name: "2021 day4", level: "warn" });
 
-class Character {
-  static compare(a: Character, b:Character) {
-      return a.getInput() < b.getInput() ? -1 : 1;
+type EdgeKey = "top"|"right"|"left"|"bottom"|"topR"|"rightR"|"leftR"|"bottomR";
+const edges: Record<
+  EdgeKey,
+  {
+    clockwise: EdgeKey,
+    opposite:EdgeKey,
+    location:EdgeKey,
+    order:number,
+    start: { x: string; y: string };
+    dir: { dx: number; dy: number };
+    reversed: boolean;
   }
-  getInput() {
-    return this.input;
-  }
-  public color: string;
-  public head: boolean;
-  constructor(
-    private input: string
-  ) {
-    let headbutt: string = '';
-    [this.color, headbutt] = input.split(' ');
-    this.head = headbutt === 'head';
-  }
-  public toString() {
-    return `${this.color} ${this.head?'head':'butt'}`;
-  }
-  public equals(other:Character) {
-    return this.color === other.color && this.head === other.head;
+> = {
+  top: {
+    clockwise:"right",
+    opposite:"bottom",
+    location:"top",
+    order:1,
+    start: { x: "min", y: "min" },
+    dir: { dx: 1, dy: 0 },
+    reversed: false,
+  },
+  topR: {
+    clockwise:"right",
+    opposite:"bottomR",
+    location:"top",
+    order:10,
+    start: { x: "max", y: "min" },
+    dir: { dx: -1, dy: 0 },
+    reversed: true,
+  },
+  bottom: {
+    clockwise:"left",
+    opposite:"top",
+    location:"bottom",
+    order:3,
+    start: { x: "min", y: "max" },
+    dir: { dx: 1, dy: 0 },
+    reversed: false,
+  },
+  bottomR: {
+    clockwise:"left",
+    opposite:"topR",
+    location:"bottom",
+    order:30,
+    start: { x: "max", y: "max" },
+    dir: { dx: -1, dy: 0 },
+    reversed: true,
+  },
+  left: {
+    clockwise:"top",
+    opposite:"right",
+    location:"left",
+    order:4,
+    start: { x: "min", y: "min" },
+    dir: { dx: 0, dy: 1 },
+    reversed: false,
+  },
+  leftR: {
+    clockwise:"top",
+    opposite:"rightR",
+    location:"left",
+    order:40,
+    start: { x: "min", y: "max" },
+    dir: { dx: 0, dy: -1 },
+    reversed: true,
+  },
+  right: {
+    clockwise:"bottom",
+    opposite:"left",
+    location:"right",
+    order:2,
+    start: { x: "max", y: "min" },
+    dir: { dx: 0, dy: 1 },
+    reversed: false,
+  },
+  rightR: {
+    clockwise:"bottom",
+    opposite:"leftR",
+    location:"right",
+    order:20,
+    start: { x: "max", y: "max" },
+    dir: { dx: 0, dy: -1 },
+    reversed: true,
+  },
+};
+const edgeOrder = Object.keys(edges).map(key => edges[key as EdgeKey]).filter(edge=>edge.order < 10).sort((a,b)=>a.order-b.order);
+class Edge {
+  public hash: number;
+  public match?: Edge;
+
+  constructor(public id: any, public key: EdgeKey, public border: string) {
+    this.hash = border
+      .split("")
+      .map((c, i) => (c === "#" ? Math.pow(2, i) : 0))
+      .reduce((c, p) => c + p, 0);
   }
 }
 class Tile {
-  private identity: string|undefined = undefined;
-  constructor(
-    public characters: Character[]
-  ) { }
-  public rotate(times: number) {
-    let copy = [...this.characters];
-    let remaining = times;
-    while (remaining > 0) {
-      copy = this.rotate1(copy);
-      remaining--;
-    }
-    return new Tile(copy);
-  }
-  private rotate1(tile: Character[]) {
-    return [tile[1], tile[2], tile[3], tile[0]];
-  }
-  public getTop() {
-    return this.characters[0];
-  }
-  public getRight() {
-    return this.characters[1];
-  }
-  public getBottom() {
-    return this.characters[2];
-  }
-  public getLeft() {
-    return this.characters[3];
-  }
-  public getIdentity() {
-    if (this.identity === undefined) {
-      let toSort = [...this.characters];
-      toSort.sort(Character.compare)
-      let   first = toSort[0];
-      let firstIndex = this.characters.indexOf(first);
-      let normalized = this.rotate(firstIndex);
-      this.identity = normalized.toString();
+  public x?: number;
+  public y?: number;
+  public edges: Edge[];
+  public matched?: Edge[];
+  public rotate?:number;
+  public flipX?: boolean;
+  public flipY?: boolean;
 
-    }
-    return this.identity;
+  constructor(public id: number, public input: string[][]) {
+    this.edges = this.getEdges();
   }
-  
-  public equals(other:Tile) {
-    if (other === null || other === undefined) {
-      return false;
-    }
 
-    return this.getIdentity() === other.getIdentity(); 
-  }
-  toString() {
-    return this.characters.map(char=>char.toString()).join(", ");
-  }
-  clone() {
-    return new Tile(this.characters);
+  getEdges(): Edge[] {
+    return Object.keys(edges).map((inKey) => {
+      const key = inKey as EdgeKey;
+      const edge = edges[key];
+      let x = edge.start.x === "min" ? 0 : this.input[0].length - 1;
+      let y = edge.start.y === "min" ? 0 : this.input.length - 1;
+      let border = "";
+
+      while (
+        x > -1 &&
+        x < this.input[0].length &&
+        y > -1 &&
+        y < this.input.length
+      ) {
+        border += this.input[y][x];
+        x += edge.dir.dx;
+        y += edge.dir.dy;
+      }
+      return new Edge(this.id, key, border);
+    });
   }
 }
-//
-//
-//       0 top
-//  3 left     1 right
-//      2 bottom
-//
-//  0  1  2
-//  3  4  5
-//  6  7  8
-//
-const gridMap : {[index: number]:{left?: number, top?:number}}= {
-  0: {},
-  1: { left: 0 },
-  2: { left: 1 },
-  3: { top: 0 },
-  4: { top: 1, left: 3 },
-  5: { top: 2, left: 4 },
-  6: { top: 3 },
-  7: { top: 4, left: 6 },
-  8: { top: 5, left: 7 }
-};
-class Grid {
-  public tiles: Tile[] = [];
-  public add(tile: Tile) {
-    let newGrid =  new Grid();
-    newGrid.tiles = [...this.tiles];
+class Image {
+  public edges: Edge[];
+  public tileMap: Record<number, Tile> = {};
+  public cornerTiles: Tile[] = [];
+  constructor(public tiles: Tile[]) {
+    this.edges = tiles.map((tile) => tile.edges).flat();
+    this.tiles.forEach((tile) => (this.tileMap[tile.id] = tile));
+    console.log(`total edges: ${this.edges.length}`);
 
-    if (this.tiles.length === 0) {
-      newGrid.tiles.push(tile);
-      return {valid: true, grid: newGrid};
-    }
-    // tile has to match according to gridmap[tiles.length + 1]
-    let validation = gridMap[this.tiles.length];
-    let valid = false;
-    let rotation = 0;
-    while (!valid  && rotation < 4)  {
-      valid = true;
-      let rotatedTile = tile.rotate(rotation);
-      if (validation.left !== undefined) {
-        let leftCharacter = this.tiles[validation.left].getRight();
-        if (leftCharacter.color !== rotatedTile.getLeft().color ||  leftCharacter.head === rotatedTile.getLeft().head) {
-          valid = false;
+    let hashes: Record<number, Edge[]> = {};
+    this.edges.forEach((edge) => {
+      hashes[edge.hash] = hashes[edge.hash] ?? [];
+      hashes[edge.hash].push(edge);
+    });
+
+    Object.values(hashes)
+      .filter((edges) => edges.length > 1)
+      .forEach((edges) => {
+        if (edges.length > 2) {
+          console.log(`unexpected number of matches! `, edges);
         }
-      }
-      
-      if (valid && validation.top !== undefined) {
-        let topCharacter = this.tiles[validation.top].getBottom();
-        if (topCharacter.color !== rotatedTile.getTop().color ||  topCharacter.head === rotatedTile.getTop().head) {
-          valid = false;
+        edges[0].match = edges[1];
+        edges[1].match = edges[0];
+      });
+
+    this.tiles.forEach((tile) => {
+      tile.matched = tile.edges
+        .filter((edge: Edge): boolean => (!!edge.match));
+    });
+
+    this.cornerTiles = this.tiles.filter((tile) => tile.matched?.length === 4);
+  }
+  stitch() {
+    const tile1 = this.cornerTiles[0];
+
+
+    // need bottom and right in place ... 
+    const sortedEdges:Edge[] = tile1.matched?.filter(e=>edges[e.key].order<10).sort((a,b)=>edges[a.key].order-edges[b.key].order) ?? [];
+    let toBeRight: Edge;
+    if (sortedEdges.length > 1) {
+        if (edges[sortedEdges[1].key].order - edges[sortedEdges[0].key].order > 1) {
+          toBeRight = sortedEdges[1];
+        } else {
+          toBeRight = sortedEdges[0];
         }
-      }
-      if (valid) {
-        newGrid.tiles.push(rotatedTile);
-        return {valid: true, grid: newGrid};
-      }
-      rotation ++;
+        let edge = edges[toBeRight.key];
+        tile1.x=0;
+        tile1.y=0;
+        tile1.rotate=0;
+        tile1.flipX =false;
+        tile1.flipY =false;
+
+        switch (edge.location) {
+          case "top":
+            tile1.rotate = 1;
+            break;   
+          case "right":
+            break;   
+          case "bottom":
+            tile1.rotate = 1;
+            tile1.flipX=true;
+            break;                              
+          case "left":
+            tile1.flipX=true;
+        }
+        let toBeLeft = toBeRight.match;
+        while (toBeLeft) {
+          const next = this.tileMap[toBeLeft?.id];
+          edge = edges[toBeLeft.key];
+          const oppositeKey = edges[toBeLeft.key].opposite;
+          const opposite = edges[oppositeKey];
+          switch (edge.location) { // needs to be left to match the right id.
+            case "top":
+              next.rotate = 1;
+              next.flipX=true;
+              break;   
+            case "right":
+              next.flipX=true;
+              break;   
+            case "bottom":
+              next.rotate = 1;
+              next.flipX=false;
+              break;                              
+            case "left":
+              next.flipX=false;
+              break;  
+          } 
+          toBeLeft = (next.matched ?? []).find(e => e.key === oppositeKey);
+        }
     }
-    return {valid: false, grid: undefined};
   }
 }
+
 const parseInput = (rawInput: string) => {
-  return rawInput
-    .replace(/\r\n/g, '\n')
-    .split(/\n\n/g)[0]
-    .split(/\n/g)
-    .map(line => new Tile(line.split(', ').map(character => new Character(character))))
-}
-const getValidGrids = (grid:Grid, remaining: Tile[]) : {grid:Grid, remaining: Tile[]}[] => {
-  let result:  {grid:Grid, remaining: Tile[]}[] = [];
-
-  let tileIndex = 0;
-  
-  while (tileIndex < remaining.length) {
-    // can I add a tile?
-    let response = grid.add(remaining[tileIndex]);
-    if (response.valid && response.grid) {
-      let remain = [...remaining];
-      remain.splice(tileIndex,1);
-      result.push({grid: response.grid, remaining: remain})
-    }
-
-    tileIndex ++;
-  }
-  // console.log(`getValidGrids: ${result.length}`)
-  return result;
-}
+  return new Image(
+    rawInput
+      .replace(/\r\n/g, "\n")
+      .split(/\n\n/g)
+      .map((tileIn) => {
+        const [idIn, ...imageIn] = tileIn.split(/\n/g);
+        const id = Number(idIn.split(/ /)[1].split(/:/)[0]);
+        return new Tile(
+          id,
+          imageIn.map((line) => line.split("")),
+        );
+      }),
+  );
+};
 
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
 
-  const firstGrid = new Grid();
-  let validGrids: {grid:Grid, remaining: Tile[]}[] = [];
-  for (var tileIndex1 = 0; tileIndex1 < input.length; tileIndex1++) {
-    for (var orientation = 0; orientation < 4; orientation++) {
-      const startingTile = input[tileIndex1].rotate(orientation);
-      let response = firstGrid.add(startingTile);
-      let nextGrid = response.grid!;
-      var remainingTiles = [...input];
-      remainingTiles.splice(tileIndex1,1);
-      validGrids.push({grid: nextGrid, remaining: remainingTiles});
-    }
-  }
-  console.log(`starting set : ${validGrids.length}`);
-
-  while (validGrids.length > 0 && validGrids[0].grid.tiles.length < 9) {
-    let newValidGrids = validGrids.map(({grid,remaining})=>getValidGrids(grid, remaining)).flatMap(a=>a);
-    
-    console.log(`next set :  ${validGrids.length}`);
-    validGrids = [...newValidGrids];
-  }
-
-  console.log(`final set :  ${validGrids.length}`);
-  validGrids.forEach(({grid})=>{
-    console.log("");
-    grid.tiles.forEach(tile=>{
-      console.log(tile.toString());
-    })
-    console.log("");
-    
-  })
-  
-  console.log("centre tiles: ");
-  let centres: Tile[] = [];
-  validGrids.forEach(({grid})=>{
-      let found = false;
-      let match = grid.tiles[4];
-      found = centres.some(centre=>centre.getIdentity() === match.getIdentity())
-      if (!found) {
-        centres.push(match);
-      }
-    })
-  centres.forEach(centre=> {
-    console.log(centre.getIdentity());
-  });
-
-  return 0;
+  return input.cornerTiles.map((tile) => tile.id).reduce((p, c) => p * c, 1);
 };
 
 const part2 = (rawInput: string) => {
   const input = parseInput(rawInput);
-
+  input.stitch();
   return 0;
 };
 
 run({
   part1: {
     tests: [
+      {
+        input: `
+Tile 2311:
+..##.#..#.
+##..#.....
+#...##..#.
+####.#...#
+##.##.###.
+##...#.###
+.#.#.#..##
+..#....#..
+###...#.#.
+..###..###
 
+Tile 1951:
+#.##...##.
+#.####...#
+.....#..##
+#...######
+.##.#....#
+.###.#####
+###.##.##.
+.###....#.
+..#.#..#.#
+#...##.#..
+
+Tile 1171:
+####...##.
+#..##.#..#
+##.#..#.#.
+.###.####.
+..###.####
+.##....##.
+.#...####.
+#.##.####.
+####..#...
+.....##...
+
+Tile 1427:
+###.##.#..
+.#..#.##..
+.#.##.#..#
+#.#.#.##.#
+....#...##
+...##..##.
+...#.#####
+.#.####.#.
+..#..###.#
+..##.#..#.
+
+Tile 1489:
+##.#.#....
+..##...#..
+.##..##...
+..#...#...
+#####...#.
+#..#.#.#.#
+...#.#.#..
+##.#...##.
+..##.##.##
+###.##.#..
+
+Tile 2473:
+#....####.
+#..#.##...
+#.##..#...
+######.#.#
+.#...#.#.#
+.#########
+.###.#..#.
+########.#
+##...##.#.
+..###.#.#.
+
+Tile 2971:
+..#.#....#
+#...###...
+#.#.###...
+##.##..#..
+.#####..##
+.#..####.#
+#..#.#..#.
+..####.###
+..#.#.###.
+...#.#.#.#
+
+Tile 2729:
+...#.#.#.#
+####.#....
+..#.#.....
+....#..#.#
+.##..##.#.
+.#.####...
+####.#.#..
+##.####...
+##..#.##..
+#.##...##.
+
+Tile 3079:
+#.#.#####.
+.#..######
+..#.......
+######....
+####.#..#.
+.#...#.##.
+#.#####.##
+..#.###...
+..#.......
+..#.###...        
+        `,
+        expected: 20899048083289,
+      },
     ],
     solution: part1,
   },
   part2: {
-    tests: [
-
-    ],
+    tests: [],
     solution: part2,
   },
   trimTestInputs: true,
-  onlyTests: false,
+  // onlyTests: true,
 });
-
