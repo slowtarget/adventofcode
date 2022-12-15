@@ -13,7 +13,11 @@ class Line {
 class Tile {
   public rock: boolean = false;
   public sand: boolean = false;
+  public fall: Tile[] = [];
   constructor(public x: number, public y: number) {}
+  getFall() {
+    return this.fall.find((tile) => !tile.sand);
+  }
   toString() {
     return "x";
   }
@@ -36,10 +40,19 @@ class Sand extends Tile {
     return "o";
   }
 }
+class Air extends Tile {
+  constructor(public x: number, public y: number) {
+    super(x, y);
+  }
+  toString() {
+    return this.sand ? "O" : ".";
+  }
+}
 class Cave {
   public grid: Tile[][] = [];
   public chasm: number;
   public sand: number = 0;
+  public air: number = 0;
   public minX: number = 0;
   constructor(public lines: Line[]) {
     lines.forEach((line) => this.draw(line));
@@ -78,6 +91,25 @@ class Cave {
       from = to;
     }
   }
+  airPop(x: number, y: number) {
+    if (y > this.chasm + 1) {
+      return undefined;
+    }
+    this.grid[y] = this.grid[y] ?? [];
+    const tile = this.grid[y][x];
+    if (tile) {
+      if (tile.rock || tile.sand) {
+        return undefined;
+      }
+      return tile;
+    }
+    const air = this.addAir(x, y);
+    air.fall = [0, -1, 1]
+      .map((dx) => this.airPop(x + dx, y + 1))
+      .filter((t) => t !== undefined)
+      .map((t) => t!);
+    return air;
+  }
   addRock(x: number, y: number) {
     this.grid[y] = this.grid[y] ?? [];
     this.grid[y][x] = new Rock(x, y);
@@ -87,20 +119,35 @@ class Cave {
     this.grid[y][x] = new Sand(x, y);
     this.sand++;
   }
+  addAir(x: number, y: number) {
+    this.grid[y] = this.grid[y] ?? [];
+    const tile = new Air(x, y);
+    this.grid[y][x] = tile;
+    this.air++;
+    return tile;
+  }
 
   getFall(x: number, y: number) {
     this.grid[y + 1] = this.grid[y + 1] ?? [];
     return [0, -1, 1].find((dx) => !this.grid[y + 1][x + dx]);
   }
   toString() {
-    return this.grid
-      .map((line) =>
-        line
-          .slice(this.minX)
-          .map((tile) => (tile ? tile.toString() : " "))
-          .join(""),
-      )
-      .join("\n");
+    const pic: string[][] = [];
+    const points = this.grid.flat();
+    const minX = Math.min(...points.map((point) => point.x));
+    const maxX = Math.max(...points.map((point) => point.x));
+    const minY = Math.min(...points.map((point) => point.y));
+    const maxY = Math.max(...points.map((point) => point.y));
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        this.grid[y] = this.grid[y] ?? [];
+        const tile: Tile | undefined = this.grid[y][x];
+        pic[y] = pic[y] || [];
+        pic[y][x] = tile ? tile.toString() : " ";
+      }
+    }
+    return pic.map((line) => line.join("")).join("\n");
   }
 }
 const parseInput = (rawInput: string) => {
@@ -140,12 +187,41 @@ const fallingSand = (input: Cave) => {
   }
   return input.sand;
 };
+const fallingSandAirPop = (input: Cave) => {
+  input.airPop(500, 0);
+  console.log(`air delivered ... ${input.air}`);
+  part2solution=input.air;
+  let origin = input.grid[0][500];
+
+  let current = origin;
+  let sand = 0;
+
+  while (current.y <= input.chasm && !origin.sand) {
+    current = origin;
+
+    while (current && !current.sand && current.y <= input.chasm) {
+      const next = current.getFall();
+      if (!next) {
+        // console.log(`resting next... (${current.x}, ${current.y}) :${sand}`);
+        current.sand = true;
+        sand++;
+        // console.log(`${input.toString()}`);
+      } else {
+        current = next;
+      }
+    }
+    //
+  }
+  return sand;
+};
+let part2solution:number=0;
 const part1 = (rawInput: string) => {
   const input = parseInput(rawInput);
-  return fallingSand(input);
+  // return fallingSand(input);
+  return fallingSandAirPop(input);
 };
 
-const part2 = (rawInput: string) => {
+const part2old = (rawInput: string) => {
   const input = parseInput(rawInput);
   const y = input.grid.length + 1;
   const minX = 500 - (y + 2);
@@ -153,6 +229,12 @@ const part2 = (rawInput: string) => {
   input.draw(new Line([new Point([minX, y]), new Point([maxX, y])]));
   input.chasm = y + 1;
   return fallingSand(input);
+};
+const part2 = (rawInput: string) => {
+  // const input = parseInput(rawInput);
+  // input.airPop(500, 0);
+  // return input.air;
+  return part2solution;
 };
 
 const testInput = `
@@ -173,11 +255,11 @@ run({
     tests: [
       {
         input: testInput,
-        expected: 98,
+        expected: 93,
       },
     ],
     solution: part2,
   },
   trimTestInputs: true,
-  // onlyTests: true,S
+  // onlyTests: true
 });

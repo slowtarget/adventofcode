@@ -4,7 +4,7 @@
   "description": "Advent of Code 2020 - solutions",
   "type": "module",
   "scripts": {
-    "start": "aocrunner day 20",
+    "start": "aocrunner day 19",
     "build": "aocrunner build",
     "format": "prettier -w src"
   },
