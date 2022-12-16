@@ -55,8 +55,8 @@ class Beacon {
     return `Beacon (${this.point.x},${this.point.y})`;
   }
 }
-const parseInput = (rawInput: string) => {
-  return rawInput
+const parseInput = (rawInput: string):Sensor[] => {
+  return rawInput 
     .replace(/\r\n/g, "\n")
     .split(/\n/g)
     .map((line) => {
