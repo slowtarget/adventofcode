@@ -6,15 +6,31 @@ interface DirRecord {
   dy: number;
 }
 
+class Point{
+  public adjacent: Partial<Record<DirKey, Point>> = {};
+  public wrapping: Partial<Record<DirKey, Point>> = {};
+  constructor(
+    public x: number,
+    public y: number
+  ) {
+
+  }
+
+  manhatten(other: Point) {
+    return Math.abs(this.x - other.x) + Math.abs(this.y - other.y);
+  }
+
+  toString() {
+    return `(${this.x},${this.y})`
+  }
+}
+
 interface ITile {
   open: boolean;
-  x: number;
-  y: number;
-  adjacent?: Partial<Record<DirKey, ITile>>; // this gets set up once and doesnt change
-  adjacentBlizzard?: Partial<Record<DirKey, OpenTile>>; // this gets set up once and doesnt change
-  adjacentMovement: Partial<Record<DirKey, {tile:OpenTile, facing:DirRecord}>>; // this changes every minute
-  toString: ()=>string;
-  clone: ()=>ITile;
+  location: Point;
+  moves: Partial<Record<DirKey, {tile:OpenTile, facing:DirRecord}>>; // this changes every minute
+  toString: () => string;
+  clone: () => ITile;
 }
 const isOpenTile = (tile: ITile| undefined): tile is OpenTile => {
   return !!(tile && tile.open);
@@ -25,14 +41,11 @@ const isWall = (tile: ITile): tile is Wall => {
 
 class Tile implements ITile{
   constructor(
-    public x: number,
-    public y: number,
+    public location: Point,
     public open: boolean,
   ){}
 
-  adjacent?: Partial<Record<DirKey, ITile>> | undefined;
-  adjacentBlizzard?: Partial<Record<DirKey, OpenTile>> | undefined;
-  adjacentMovement: Partial<Record<DirKey, { tile: OpenTile; facing: DirRecord; }>> ={};
+  moves: Partial<Record<DirKey, { tile: OpenTile; facing: DirRecord; }>> ={};
 
   toString():string {
     throw new Error("not implemented");
@@ -45,37 +58,37 @@ class OpenTile extends Tile {
   tmpBlizzards: Blizzard[] = [];
   public blizzards: Blizzard[] = [];
   constructor(
-    x: number, 
-    y: number, 
+    location: Point, 
   ) {
-    super(x, y, true);
+    super(location, true);
   }
   toString() {
-    return `.(${this.x},${this.y})`
+    return `.${this.location.toString()}`
   }
   clone(){
-    const tile: OpenTile = new OpenTile(this.x, this.y);
+    const tile: OpenTile = new OpenTile(this.location);
     tile.blizzards = this.blizzards.map(b=>new Blizzard(tile, b.direction));
-    tile.adjacent = this.adjacent;
-    tile.adjacentBlizzard = this.adjacentBlizzard;
-    tile.adjacentMovement = {};
+    tile.moves = {};
     return tile;
   }
 
 }
 class Wall extends Tile {
   
-  constructor(x: number, y: number) {
-    super(x, y, false);
+  constructor(
+    location: Point
+  ) {
+    super(location, false);
   }
+
   toString() {
-    return `#(${this.x},${this.y})`
+    return `#${this.location.toString()}`
   }
+
   clone() {
     // don't need to copy walls... 
     return this;
   }
-
 }
 class Blizzard {  
   constructor(
@@ -84,7 +97,7 @@ class Blizzard {
   ) {
   }
   toString() {
-    return `${this.tile.toString()} ${this.direction}`
+    return `${this.direction}${this.tile.location.toString()}`
   }
 }
 
@@ -103,14 +116,14 @@ const parseInput = (rawInput: string) => {
   const tiles: ITile[][] = rawInput.replace(/\r\n/g, "\n").split(/\n/g).map((line,y)=>line.split("").map((char,x)=>{
     switch (char) {
       case "#":
-        return new Wall(x, y);
+        return new Wall(new Point(x, y));
       case ".":
-        return new OpenTile(x, y);
+        return new OpenTile(new Point(x, y));
       case "^":
       case "v":
       case "<":
       case ">":
-        const tile:OpenTile = new OpenTile(x, y);
+        const tile:OpenTile = new OpenTile(new Point(x, y));
         const blizzard = new Blizzard(tile, char as DirKey);
         tile.blizzards = [blizzard];
         blizzards.push(blizzard);
@@ -119,6 +132,49 @@ const parseInput = (rawInput: string) => {
         throw new Error(`unrecognized char at x:${x} y:${y} : ${char} `);
     }
   }));
+
+  const get = (x: number, y: number): ITile | undefined => {
+    if (x < 0 || y < 0 || y >= tiles.length || x > tiles[y].length) {
+      return undefined;
+    }
+    return tiles[y] && tiles[y][x];
+  } 
+    // what is actually next to each tile. (time to populate adjacent on points) only open points and open tiles ...
+  tiles.flat()
+    .filter(tile => tile.open)
+    .forEach(tile => {
+      tile.location.adjacent=dirKeys
+        .map(key=>directions[key])
+        .map(direction=>({key: direction.key, tile: get(tile.location.x + direction.dx, tile.location.y + direction.dy)}))
+        .filter(dir => dir.tile !== undefined)
+        .filter(dir => dir.tile?.open)
+        .reduce((prev: Partial<Record<DirKey, Point>>, dir) => {
+          prev[dir.key] = dir.tile!.location;
+          return prev;
+        },{});
+  });
+
+  // if a blizzard is moving where can it go next? (time to populate wrapping on points)
+  tiles.flat()
+  .filter(tile => tile.open)
+  .forEach(tile=>{
+    tile.location.wrapping = {...tile.location.adjacent}; // this wont have dir's populated that hit walls etc
+    dirKeys
+      .map(key=>({dir:directions[key], point: tile.location.adjacent![key]}))
+      .filter(adj => !adj.point)
+      .map(adj => adj.dir)
+      .forEach(direction => {
+          // we hit a wall
+          // walk backwards till we hit another wall...
+          let p = tile;
+          let n = get(p.location.x - direction.dx, p.location.y - direction.dy);
+          while (n && n.open) {
+            p = n;
+            n = get(p.location.x - direction.dx, p.location.y - direction.dy);
+          }
+          tile.location.wrapping[direction.key] = p.location;
+      });
+  });
   return {tiles, blizzards}
 };
 class Board {
@@ -139,48 +195,9 @@ class Board {
       .flat()
       .filter(tile=>isOpenTile(tile))
       .map(tile=>(tile as OpenTile));
-
-    // what is actually next to each tile.
-    tiles.flat().forEach(tile=>{
-      tile.adjacent=dirKeys
-        .map(key=>directions[key])
-        .map(direction=>({key: direction.key, tile: this.get(tile.x + direction.dx, tile.y + direction.dy)}))
-        .filter(dir=>dir.tile !== undefined)
-        .reduce((prev: Partial<Record<DirKey, ITile>>, dir) => {
-          prev[dir.key] = dir.tile!;
-          return prev;
-        },{});
-    });
-
-    // if a blizzard is moving where can it go next?
-    tiles.flat()
-    .filter(tile => tile.open)
-    .forEach(tile=>{
-      tile.adjacentBlizzard=dirKeys
-        .map(key=>(({dir:directions[key], tile: tile.adjacent![key]})))
-        .filter(adj => !!adj.tile)
-        .reduce((prev: Partial<Record<DirKey, OpenTile>>, adj) => {
-          if (isOpenTile(adj.tile)) {
-            prev[adj.dir.key] = adj.tile as OpenTile;
-          } else {
-            // we hit a wall
-            // walk backwards till we hit another wall... (or start or end)
-            let p = adj.tile!;
-            let n = this.get(p.x - adj.dir.dx, p.y - adj.dir.dy);
-            while (n && n.open && n !== this.start && n !== this.end) {
-              p = n;
-              n = this.get(p.x - adj.dir.dx, p.y - adj.dir.dy);
-            }
-            prev[adj.dir.key] = p as OpenTile;
-          }
-          return prev;
-        },{})
-    });
-
-
   }
 
-  get(x:number, y:number) {
+  get(x:number, y:number): ITile | undefined {
     if (x < 0 || y < 0 || y >= this.tiles.length || x > this.tiles[y].length) {
       return undefined;
     }
@@ -192,11 +209,17 @@ class Board {
     
     this.open
     .filter(tile => tile.blizzards.length > 0)
-    .forEach(tile => tile.blizzards.forEach(blizzard=>{
-      const next = tile.adjacentBlizzard![blizzard.direction]!;
-       blizzard.tile = next;
-       next.tmpBlizzards.push(blizzard);
-    }));
+    .forEach(tile => tile.blizzards
+      .forEach(blizzard=>{
+        const next = tile.location.wrapping![blizzard.direction]!;
+        const temp = this.get(next.x, next.y);
+        if (!temp || !isOpenTile(temp)) {
+          throw new Error("blizzard cannot move!");
+        }
+        blizzard.tile = temp;
+        temp.tmpBlizzards.push(blizzard);
+      })
+    );
     
     this.open.forEach(tile => tile.blizzards=tile.tmpBlizzards);
     this.open.forEach(tile => tile.tmpBlizzards=[]);
@@ -204,14 +227,16 @@ class Board {
 
   checkMovement(){
     this.open.forEach(tile => {
-      tile.adjacentMovement = {};
+      tile.moves = {};
       dirKeys
-        .map(key=>({dir:directions[key], tile:tile.adjacent![key]}))
+        .map(key=>({dir:directions[key], point: tile.location.adjacent[key]}))
+        .filter(adj => !!adj.point)
+        .map(adj => ({...adj, tile: this.get(adj.point?.x!, adj.point?.y!)!}))
         .filter(adj => isOpenTile(adj.tile!))
-        .map(adj=>({dir:adj.dir, tile: adj.tile as OpenTile}))
+        .map(adj=>({...adj, tile: adj.tile as OpenTile}))
         .forEach(adj=>{
           if (!adj.tile.blizzards.length) {
-            tile.adjacentMovement[adj.dir.key] = {tile: adj.tile, facing: adj.dir};
+            tile.moves[adj.dir.key] = {tile: adj.tile, facing: adj.dir};
           }
         })
     })
@@ -219,8 +244,8 @@ class Board {
 
   clone() {
     const board = new Board(this.tiles.map(row=>row.map(tile=>tile.clone())));
-    board.start = board.tiles[this.start.y][this.start.x];
-    board.end = board.tiles[this.end.y][this.end.x];
+    board.start = this.get(this.start.location.x,this.start.location.y)!;
+    board.end = this.get(this.end.location.x,this.end.location.y)!;
     return board;
   }
 
@@ -231,6 +256,11 @@ const nextBoard = (previous: Board) => {
   next.checkMovement();
   return next;
 }
+type Move = {
+  location: Point;
+  minute: number;
+  cost: number;
+}
 const part1 = (rawInput: string) => {
   const {tiles, blizzards} = parseInput(rawInput);
   const board = new Board(tiles);
@@ -238,10 +268,19 @@ const part1 = (rawInput: string) => {
   const boards: Board[] = [board];
   boards.push(nextBoard(board));
 
-  const position = board.start;
+  let move: Move = {location: board.start.location, minute:0, cost: 0}
+  let queue: Move[] = [];
+  while (move.location !== board.end.location) {
+    boards[move.minute] = (boards[move.minute] || nextBoard(boards[move.minute - 1]))
+    boards[move.minute + 1] = (boards[move.minute + 1] || nextBoard(boards[move.minute]))
+    const next = boards[move.minute + 1];
+    const tile = next.get(move.location.x, move.location.y)!;
+    const moves = tile.moves;
+    Object.values(moves).map(m => ).array.forEach(element => {
+      
+    });
 
-
-
+  }
 
 
   return 0;
