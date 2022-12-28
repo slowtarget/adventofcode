@@ -9,12 +9,11 @@ interface DirRecord {
 class Point{
   public adjacent: Partial<Record<DirKey, Point>> = {};
   public wrapping: Partial<Record<DirKey, Point>> = {};
+  destinationManhatten: number = Infinity;
   constructor(
     public x: number,
     public y: number
-  ) {
-
-  }
+  ) {}
 
   manhatten(other: Point) {
     return Math.abs(this.x - other.x) + Math.abs(this.y - other.y);
@@ -28,6 +27,9 @@ class Point{
 interface ITile {
   open: boolean;
   location: Point;
+  cost: number;
+  visited: boolean;
+  
   moves: Partial<Record<DirKey, {tile:OpenTile, facing:DirRecord}>>; // this changes every minute
   toString: () => string;
   clone: () => ITile;
@@ -40,6 +42,9 @@ const isWall = (tile: ITile): tile is Wall => {
 }
 
 class Tile implements ITile{
+  public cost: number = Infinity;
+  public from?: ITile;
+  public visited: boolean = false;
   constructor(
     public location: Point,
     public open: boolean,
@@ -250,46 +255,128 @@ class Board {
   }
 
 }
+let boardCount = 0;
 const nextBoard = (previous: Board) => {
+  boardCount++;
+  // console.log(`creating a board! ${boardCount}`);
   const next = previous.clone();
   next.theWindBloweth();
   next.checkMovement();
   return next;
 }
 type Move = {
-  location: Point;
+  tile: OpenTile;
   minute: number;
-  cost: number;
 }
+class Journey{
+  public boards: Board[] = [];
+  public queue: Move[] = [];
+  public destinationCost: number = Infinity;
+  public loops = 0;
+  public start = (new Date()).getTime();
+  public iteration = this.start;
+  constructor(
+    public initial: Board,
+    public origin: Point,
+    public destination: Point
+  ) {
+    this.boards.push(initial);
+    // persist the manhatten distance to the destination from each location - its used all the time...
+    initial.tiles.flat()
+    .filter(tile => isOpenTile(tile))
+    .map(tile => tile.location)
+    .forEach(point=>{
+      point.destinationManhatten = point.manhatten(destination);
+    });
+    // initialize costs and visited flags 
+    initial.tiles.flat()
+    .filter(tile => isOpenTile(tile))
+    .forEach(tile=>{
+      tile.cost = Infinity;
+      tile.visited = false;
+    });
+    // start the queue 
+    const originTile = initial.get(origin.x, origin.y)! as OpenTile;
+    originTile.cost = 0;
+    this.queue.push({tile: originTile , minute: 0});
+  }
+  travel() { //dijkstra
+    while (this.queue.length > 0) {
+      this.loops++;
+      this.destinationCost = Math.min(...this.boards.map(board => board.get(this.destination.x, this.destination.y)!.cost));
+      const min = this.queue.sort((a, b) => a.tile.cost - b.tile.cost).shift()!;
+      if ((min.minute + min.tile.location.destinationManhatten) < this.destinationCost && !min.tile.visited) { // truncate any that won't make the grade
+        min.tile.visited = true;
+  
+        this.boards[min.minute] = (this.boards[min.minute] || nextBoard(this.boards[min.minute - 1]));
+        this.boards[min.minute + 1] = (this.boards[min.minute + 1] || nextBoard(this.boards[min.minute]));
+        const next = this.boards[min.minute + 1];
+        const moves = next.get(min.tile.location.x, min.tile.location.y)!.moves; // look at the spaces available next turn.
+  
+        if (moves === undefined) {
+          throw new Error("moves undefined");
+        }
+  
+        if (Object.values(moves).length === 0) {
+          // console.log(`nowhere to go! ${min.minute}: ${min.tile.toString()}`);
+        }
+  
+        Object.values(moves)
+          .filter(m => !m.tile.visited)
+          .forEach(m => {
+            m.tile.cost = Math.min(m.tile.cost, min.minute + 1 + 4 * m.tile.location.destinationManhatten); // weighted to get a quick answer to start truncating
+            this.queue.push({
+              tile: m.tile,
+              minute: min.minute + 1
+            });
+          });
+        const now = (new Date()).getTime();
+        if (now - this.iteration > 5000) {
+          this.iteration = now;
+          console.log({
+            lps: this.loops,
+            elapsed: Math.floor((now - this.start) / 1000),
+            len: this.queue.length,
+            min: min.minute,
+            lst: min.minute + min.tile.location.destinationManhatten,
+            cst: min.tile.cost,
+            tl: min.tile.toString(),
+            add: Object.values(moves).length,
+            end: this.destinationCost === Infinity ? "X" : this.destinationCost
+          });
+        }
+      }
+    }
+    console.log({loops: this.loops, cost: this.destinationCost}); 
+  }
+}
+
 const part1 = (rawInput: string) => {
   const {tiles, blizzards} = parseInput(rawInput);
   const board = new Board(tiles);
-  
-  const boards: Board[] = [board];
-  boards.push(nextBoard(board));
 
-  let move: Move = {location: board.start.location, minute:0, cost: 0}
-  let queue: Move[] = [];
-  while (move.location !== board.end.location) {
-    boards[move.minute] = (boards[move.minute] || nextBoard(boards[move.minute - 1]))
-    boards[move.minute + 1] = (boards[move.minute + 1] || nextBoard(boards[move.minute]))
-    const next = boards[move.minute + 1];
-    const tile = next.get(move.location.x, move.location.y)!;
-    const moves = tile.moves;
-    Object.values(moves).map(m => ).array.forEach(element => {
-      
-    });
-
-  }
-
-
-  return 0;
+  const outbound = new Journey(board, board.start.location, board.end.location);
+  outbound.travel();
+  return outbound.destinationCost;
 };
 
 const part2 = (rawInput: string) => {
-  const input = parseInput(rawInput);
+  const {tiles, blizzards} = parseInput(rawInput);
+  const board = new Board(tiles);
 
-  return 0;
+  const outbound = new Journey(board, board.start.location, board.end.location);
+  outbound.travel();
+
+  const arrival = outbound.boards.find(board => board.get(board.end.location.x, board.end.location.y)?.cost === outbound.destinationCost)?.clone()!;
+  const inbound = new Journey(arrival, arrival.end.location, arrival.start.location);
+  inbound.travel();
+
+  const restart = inbound.boards.find(board => board.get(board.start.location.x, board.start.location.y)?.cost === inbound.destinationCost)?.clone()!;
+  const outboundAgain = new Journey(restart, restart.start.location, restart.end.location);
+  outboundAgain.travel();
+  const total = outbound.destinationCost + inbound.destinationCost + outboundAgain.destinationCost;
+  console.log({outbound: outbound.destinationCost, inbound: inbound.destinationCost, outboundAgain: outboundAgain.destinationCost, total});
+  return total;
 };
 
 const testInput = `
@@ -314,11 +401,12 @@ run({
     tests: [
       {
         input: testInput,
-        expected: -1,
+        expected: 54,
       },
     ],
     solution: part2,
   },
   trimTestInputs: true,
-  onlyTests: true,
+  // onlyTests: true,
 });
+
