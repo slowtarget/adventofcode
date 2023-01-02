@@ -106,7 +106,7 @@ class Cave {
       .forEach(n => from.neighbours[n.valve.key] = n);
   }
  
-  dijkstraSolution(){
+  dijkstraSolution(minutes: number){
     this.valves.forEach((v) => v.reset());
     
     const beTheBest = (best:QueueRecord| undefined, contender:QueueRecord) => {
@@ -119,10 +119,13 @@ class Cave {
         return contender;
       }
     } 
+    // let bcj = this.stringToId("[BB, CC, JJ]");
+    // let deh = this.stringToId("[DD, EE, HH]");
 
     let queue : QueueRecord[] = [];
-    queue.push({id: 0, remainingTime: 30, accruedRelease: 0, visited: 0});
+    queue.push({id: 0, remainingTime: minutes, accruedRelease: 0, visited: 0});
 
+    
     let best: QueueRecord|undefined = undefined;
     let loops=0;
     let now = new Date().getTime();
@@ -130,6 +133,15 @@ class Cave {
     let start = now;
     while (queue.length) {
       const next = queue.shift()!;
+
+      const combo = this.combos[next.visited];
+      if (combo === undefined || combo < next.accruedRelease) {
+        this.combos[next.visited] = next.accruedRelease;
+      }
+
+      // if ([bcj, deh].includes(next.visited)){
+      //   console.log(this.idToString(next.visited), next.accruedRelease, this.combos[next.visited] )
+      // }
 
       if (next.remainingTime === 0) {
         best = beTheBest(best, next); 
@@ -168,10 +180,67 @@ class Cave {
     return best?.accruedRelease; 
   } 
 
+  bestCombo() {
+    let best = {id: 0, id2: 0, value: 0, value2: 0, total: 0};
+
+    let bcj = this.combos[this.stringToId("[BB, CC, JJ]")];
+    let deh = this.combos[this.stringToId("[DD, EE, HH]")];
+
+    best.total = (bcj ?? 0) + (deh ?? 0);
+    console.log({bcj, deh, best});
+
+    Object.entries(this.combos)
+    .map(([id, value])=> ({id: Number(id), value}))
+    .forEach(({id, value})=> {
+      Object.entries(this.combos)
+      .map(([id2, value2])=> ({id2: Number(id2), value2}))
+      .filter(({id2, value2}) => id2 !== id)
+      .forEach(({id2, value2})=> {
+        if ((id & id2) === 0) {
+          // disjoint sets
+          const total = value + value2;
+          if (total > best.total) {
+            // console.log(`new best ${total}\n  ${value} : ${this.idToString(id)}\n  ${value2} : ${this.idToString(id2)} `)
+            best = {id, id2, value, value2, total};
+          }
+        }
+      })
+    })
+    console.log({
+      ...best,
+      id: this.idToString(best.id), 
+      id2: this.idToString(best.id2)
+    });
+    return best.total;
+  }
+
+  idToValves(input: number) {
+    let id = input | 0;
+    return this.valves.filter(v =>(v.id & id) > 0);
+  }
+
+  idToString(input: number) {
+    let id = input | 0;
+    return "[" + this.valves.filter(v =>(v.id & id) > 0).map(v => v.key).join(", ") + "]";
+  }
+
+  stringToId(input: string) {
+    let id = 0;
+    input.split("[")[1].split("]")[0].split(/, /g)
+    .map(key => this.chart[key])
+    .filter(v => !!v)
+    .map(v => v.id)
+    .forEach(i => id = id | i)
+    return id;
+  }
+
   toString(){
     return this.valves.map(v=>v.toString()).join("\n");
   }
 }
+
+
+
 const parseInput = (rawInput: string): Cave => {
   let id = 1;
   const valves: Valve[] = rawInput
@@ -192,13 +261,14 @@ const parseInput = (rawInput: string): Cave => {
 
 const part1 = (rawInput: string) => {
   const cave = parseInput(rawInput);
-  return cave.dijkstraSolution();
+  return cave.dijkstraSolution(30);
 };
 
 const part2 = (rawInput: string) => {
-  const input = parseInput(rawInput);
-
-  return 0;
+  const cave = parseInput(rawInput);
+  cave.dijkstraSolution(26);
+  return cave.bestCombo();
+  // That's not the right answer; your answer is too high. (You guessed 3272.)
 };
 
 const testInput = `
@@ -217,6 +287,12 @@ run({
   part1: {
     tests: [
       {
+        input: `
+Valve AA has flow rate=0; tunnels lead to valves BB
+Valve BB has flow rate=10; tunnels lead to valves AA`,
+        expected: 280,
+      },
+      {
         input: testInput,
         expected: 1651,
       },
@@ -226,6 +302,27 @@ run({
   part2: {
     tests: [
       {
+        input: `
+Valve AA has flow rate=0; tunnels lead to valves BB
+Valve BB has flow rate=10; tunnels lead to valves AA`,
+        expected: 240,
+      },
+      {
+        input: `
+Valve AA has flow rate=0; tunnels lead to valves BB, CC
+Valve BB has flow rate=10; tunnels lead to valves AA, CC
+Valve CC has flow rate=20; tunnels lead to valves AA, BB`,
+        expected: 240 + 480,
+      },
+      {
+        input: `
+Valve AA has flow rate=0; tunnels lead to valves BB, CC
+Valve BB has flow rate=10; tunnels lead to valves AA, CC
+Valve CC has flow rate=20; tunnels lead to valves AA, BB, DD
+Valve DD has flow rate=1; tunnels lead to valves CC`,
+        expected: 240 + 480 + (22),
+      },
+      {
         input: testInput,
         expected: 1707,
       },
@@ -233,5 +330,5 @@ run({
     solution: part2,
   },
   trimTestInputs: true,
-  // onlyTests: true,
+  // onlyTests: true,s
 });
