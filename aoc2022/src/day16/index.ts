@@ -15,6 +15,7 @@ class Valve {
     public key: string,
     public rate: number,
     public adjacentKeys: string[],
+    public id: number,
   ) {}
 
   public reset() {
@@ -23,7 +24,6 @@ class Valve {
     this.visited = false;
     this.open=false;
   }
-
 
   toString(){
     return `${this.key} : ${this.open?"OPEN":"CLOSED"} : rate ${this.rate}`
@@ -40,14 +40,21 @@ class ValveWithDistance {
   }
 }
 
-type QueueRecord = {remainingTime:number, accruedRelease:number, valve:Valve, visited:boolean, route:QueueRecord[]};
+type QueueRecord = {
+  remainingTime:number, 
+  accruedRelease:number, 
+  valve:Valve, 
+  visited:boolean, 
+  route:QueueRecord[],
+  bitRoute:number
+};
 class Cave {
   public days: number = 30;
   public current: Valve;
   public origin: Valve;
   public chart: Record<string, Valve> = {};
   public release: number = 0;
-  
+
   constructor(public valves: Valve[]) {
     // some enrichment going on here...
     valves.forEach((v) => (this.chart[v.key] = v)); // populate cave chart
@@ -115,7 +122,7 @@ class Cave {
     //  https://www.reddit.com/r/adventofcode/comments/zn6k1l/2022_day_16_solutions/ Joauld (PureScript)
 
     let queue : QueueRecord[] = [];
-    queue.push(<QueueRecord>{remainingTime:30, accruedRelease:0, valve:this.origin, visited:false, route:[]});
+    queue.push(<QueueRecord>{remainingTime:30, accruedRelease:0, valve:this.origin, visited:false, route:[], bitRoute:0});
 
     let best: QueueRecord|undefined = undefined;
     let loops=0;
@@ -137,14 +144,15 @@ class Cave {
       } else {
         const targets = Object.values(max.valve.neighbours)
             .filter(n => n.valve.rate > 0)
-            .filter(n => !max.route.map(r => r.valve).includes(n.valve))
+            // .filter(n => !max.route.map(r => r.valve).includes(n.valve))
+            .filter(n => (n.valve.id & max.bitRoute) === 0)
             .filter(n => n.distance < (max.remainingTime - 1));
         
         targets
         .forEach(r=>{
           const remaining: number = Math.max(0, max.remainingTime - r.distance - 1);
           const released: number = max.accruedRelease + (remaining * r.valve.rate);
-          queue.push(<QueueRecord>{remainingTime: remaining, accruedRelease: released, valve: r.valve, visited: false, route: [...max.route, max]});
+          queue.push({remainingTime: remaining, accruedRelease: released, valve: r.valve, visited: false, route: [...max.route, max], bitRoute: (r.valve.id | max.bitRoute)});
         });
 
         if (targets.length === 0) {
@@ -177,6 +185,7 @@ class Cave {
   }
 }
 const parseInput = (rawInput: string): Cave => {
+  let id = 1;
   const valves: Valve[] = rawInput
     .replace(/\r\n/g, "\n")
     .split(/\n/g)
@@ -187,7 +196,8 @@ const parseInput = (rawInput: string): Cave => {
       ?.slice(1);
       console.log(line,match)
       const [key, rate, adjacent] = match!;
-      return new Valve(key, Number(rate), adjacent.split(/, /));
+      const valveId = (Number(rate) > 0) ? id = id << 1 : 0; 
+      return new Valve(key, Number(rate), adjacent.split(/, /), valveId);
     });
   return new Cave(valves);
 };
