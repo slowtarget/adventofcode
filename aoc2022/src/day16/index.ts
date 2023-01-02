@@ -6,11 +6,10 @@ import { json } from "stream/consumers";
 
 class Valve {
   public adjacent: Valve[] = [];
-  public open: boolean = false;
-  public potential: number = 0;
   public distance: number = Infinity;
   public visited: boolean = false;
   public neighbours: Record<string, ValveWithDistance> = {}; //friends with benefits 
+  public distances: {id:number, distance:number}[] = [];
   constructor(
     public key: string,
     public rate: number,
@@ -20,15 +19,10 @@ class Valve {
 
   public reset() {
     this.distance = Infinity;
-    this.potential = 0;
     this.visited = false;
-    this.open=false;
   }
 
   toString(){
-    return `${this.key} : ${this.open?"OPEN":"CLOSED"} : rate ${this.rate}`
-  }
-  toString2(){
     return `${this.key} [${this.rate}] `;
   }
 }
@@ -41,19 +35,20 @@ class ValveWithDistance {
 }
 
 type QueueRecord = {
-  remainingTime:number, 
-  accruedRelease:number, 
-  valve:Valve, 
-  visited:boolean, 
-  route:QueueRecord[],
-  bitRoute:number
+  id: number;
+  remainingTime:number; 
+  accruedRelease:number;
+  visited:number;
 };
 class Cave {
   public days: number = 30;
-  public current: Valve;
   public origin: Valve;
   public chart: Record<string, Valve> = {};
-  public release: number = 0;
+  
+  public valveChart: Record<number, Valve> = {};
+  public rates:  Record<number, number> = {};
+
+  public combos: Record<number, number> = {};
 
   constructor(public valves: Valve[]) {
     // some enrichment going on here...
@@ -62,17 +57,33 @@ class Cave {
       (v) => (v.adjacent = v.adjacentKeys.map((key) => this.chart[key])),
     ); // upgrade links to objects
     valves.forEach((v) => this.dijkstraDistances(v));
-    this.current = this.chart["AA"];
     this.origin = this.chart["AA"];
-  }
-  public tick() {
-    // this.release += this.valves.map((v) => v.tick()).reduce((p, c) => p + c, 0);
-    this.days--;
+    // prune the network of broken valves ...
+    // keep AA as its the start - but bin off all the other valves
+    const working = valves.filter(v => !!v.rate);
+    const broken = valves.filter(v => !working.includes(v));
+    const brokenKeys = broken.map(v => v.key);
+    this.valves = [this.origin, ...working];
+    this.valves.forEach(v => {
+      v.adjacent = [];
+      v.adjacentKeys = [];
+      Object.keys(v.neighbours)
+      .filter(key => brokenKeys.includes(key))
+      .forEach(key => {
+        delete v.neighbours[key];
+      });
+    });
+    
+    this.valves.forEach(v => {
+      v.distances = [];
+      this.rates[v.id] = v.rate;
+      this.valveChart[v.id] = v;
+      Object.values(v.neighbours).forEach(n => {
+        v.distances.push({id:n.valve.id, distance: n.distance});
+      })
+    });
   }
 
-  //
-  // AA --- DD
-  //
   dijkstraDistances(from: Valve) {
     this.valves.forEach((v) => v.reset());
     from.distance = 0;
@@ -87,8 +98,7 @@ class Cave {
           a.distance = Math.min(a.distance, min.distance + 1);
         });
     }
-    // all valves now populated with a distance from the start ... add these values to the objects ... only want those with potential
-    // friends with benefits. 
+
     from.neighbours = {};
     this.valves
       .filter(v => v != from)
@@ -96,17 +106,9 @@ class Cave {
       .forEach(n => from.neighbours[n.valve.key] = n);
   }
  
-
   dijkstraSolution(){
     this.valves.forEach((v) => v.reset());
     
-    const sortSolution = (a:QueueRecord, b:QueueRecord) => {
-      if (a.remainingTime === b.remainingTime) {
-        return b.accruedRelease - a.accruedRelease;
-      }
-      return b.remainingTime - a.remainingTime;
-    }
-
     const beTheBest = (best:QueueRecord| undefined, contender:QueueRecord) => {
       if (!best) {
         return contender;
@@ -114,52 +116,38 @@ class Cave {
       if (best.accruedRelease >= contender.accruedRelease){
         return best;
       } else {
-        console.log(`new max : ${contender.accruedRelease}`);
         return contender;
       }
     } 
-    // If the priority queue sorts first by most remaining time, then by most accrued volume
-    //  https://www.reddit.com/r/adventofcode/comments/zn6k1l/2022_day_16_solutions/ Joauld (PureScript)
 
     let queue : QueueRecord[] = [];
-    queue.push(<QueueRecord>{remainingTime:30, accruedRelease:0, valve:this.origin, visited:false, route:[], bitRoute:0});
+    queue.push({id: 0, remainingTime: 30, accruedRelease: 0, visited: 0});
 
     let best: QueueRecord|undefined = undefined;
     let loops=0;
-    let time = 30;
     let now = new Date().getTime();
     let iteration = now;
     let start = now;
     while (queue.length) {
-      // queue.sort(sortSolution);
-      const max = queue.shift()!;
-      max.visited = true;
-      if(time > max.remainingTime){
-        console.log(loops, "max", max.remainingTime, max.accruedRelease,"queue", queue.length);
-        time = max.remainingTime;
-      }
-      if (max.remainingTime === 0) {
-        // console.log("out of time ");
-        best = beTheBest(best,max); 
+      const next = queue.shift()!;
+
+      if (next.remainingTime === 0) {
+        best = beTheBest(best, next); 
       } else {
-        const targets = Object.values(max.valve.neighbours)
-            .filter(n => n.valve.rate > 0)
-            // .filter(n => !max.route.map(r => r.valve).includes(n.valve))
-            .filter(n => (n.valve.id & max.bitRoute) === 0)
-            .filter(n => n.distance < (max.remainingTime - 1));
+        const targets = this.valveChart[next.id].distances
+            .filter(n => (n.id & next.visited) === 0)
+            .filter(n => n.distance < (next.remainingTime - 1));
         
         targets
-        .forEach(r=>{
-          const remaining: number = Math.max(0, max.remainingTime - r.distance - 1);
-          const released: number = max.accruedRelease + (remaining * r.valve.rate);
-          queue.push({remainingTime: remaining, accruedRelease: released, valve: r.valve, visited: false, route: [...max.route, max], bitRoute: (r.valve.id | max.bitRoute)});
+        .forEach(n=>{
+          const remaining: number = Math.max(0, next.remainingTime - n.distance - 1);
+          const released: number = next.accruedRelease + (remaining * this.rates[n.id]);
+          queue.push({id: n.id, remainingTime: remaining, accruedRelease: released, visited: (n.id | next.visited)});
         });
 
         if (targets.length === 0) {
-          // console.log("end of route"); 
-          best = beTheBest(best,max);
+          best = beTheBest(best,next);
         }
-        // console.log(i, targets.length, queue.length);
       }
       loops++;
       now = new Date().getTime();
@@ -168,11 +156,11 @@ class Cave {
         console.log({
           loops, 
           elapsed: (now - start) / 1000,
-          max: max.valve.toString(), 
-          rem: max.remainingTime, 
-          acc: max.accruedRelease,
+          max: this.valveChart[next.id].toString(), 
+          rem: next.remainingTime, 
+          acc: next.accruedRelease,
           q: queue.length, 
-          rt: max.route.map(v => v.valve.key).join(", ")
+          rt: next.visited
         });
       }
     }
@@ -181,7 +169,7 @@ class Cave {
   } 
 
   toString(){
-    return this.valves.map(v=>v.toString()).join("\n") + "\n" + `Current: ${this.current.key}`
+    return this.valves.map(v=>v.toString()).join("\n");
   }
 }
 const parseInput = (rawInput: string): Cave => {
