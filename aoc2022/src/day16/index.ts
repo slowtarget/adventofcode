@@ -1,5 +1,6 @@
 import run from "aocrunner";
 import { Console } from "console";
+import { it } from "node:test";
 import { format } from "path";
 import { json } from "stream/consumers";
 
@@ -16,25 +17,14 @@ class Valve {
     public adjacentKeys: string[],
   ) {}
 
-
-  // public tick(): number {
-  //   return this.open ? this.rate : 0;
-  // }
   public reset() {
     this.distance = Infinity;
     this.potential = 0;
     this.visited = false;
     this.open=false;
   }
-  public getPotential(from: Valve, days: number) {
-    if (this.open) {
-      this.potential = 0;
-    } else {
-      this.potential =
-        Math.max(0, days - this.neighbours[from.key].distance - 1) * this.rate;
-    }
-    return this.potential;
-  }
+
+
   toString(){
     return `${this.key} : ${this.open?"OPEN":"CLOSED"} : rate ${this.rate}`
   }
@@ -42,77 +32,22 @@ class Valve {
     return `${this.key} [${this.rate}] `;
   }
 }
-class Combo {
-  public released:number=0;
-  public minutes =0;
-  public action:string ="init";
-  public debug:boolean=false;
-  constructor(
-    public valves:Valve[]
-  ){}
-  
-  
-  evaluate(origin:Valve){
-    let current = origin;
-    let i=0;
-    this.minutes=1;
-    this.released = 0;
-    this.valves.forEach(v=>v.reset());
-    if (JSON.stringify(["DD","BB","JJ","HH","EE","CC"])===JSON.stringify(this.valves.map(v=>v.key))){
-      this.debug=true;
-    }
-    while (this.minutes <=30 && i<this.valves.length) {
-      const target = this.valves[i];
-      //walk
-      const distance = current.neighbours[target.key].distance;
-      const start=this.minutes;
-      let steps = 0;
-      while (this.minutes - start < distance && this.minutes <= 30){
-        steps ++;
-        this.action=`You move from ${current.key} towards ${target.key} : ${steps}/${distance}`
-        this.tick();
-      }
-      current = target;
-      //open
-      this.action=`You open valve ${current.key}`
-
-      this.tick();
-      current.open=true;
-      this.released += current.rate * (31-this.minutes); 
-      i++;
-    }
-    while (this.minutes <=30) {
-      this.action=`You wait`;
-      this.tick();
-    }
-    return this.released;
-  }
-  tick() {
-    // const releasedNow =this.valves.filter(v=>v.open).map((v) => v.tick()).reduce((p, c) => p + c, 0);
-    // this.released += releasedNow; 
-    this.minutes ++;
-    if (this.debug) {
-
-      console.log(`== Minute ${this.minutes} ==`);
-      console.log(`Open valves: ${this.valves.map(v=>v.toString2())} released ${this.released} pressure`);
-      console.log(this.action);
-      console.log("");
-    }
-  }
-}
 
 class ValveWithDistance {
   constructor(public valve: Valve, public distance: number) {}
+  toString() {
+    return `-- ${this.distance} --> ${this.valve.toString()}`;
+  }
 }
-type QueueRecord = {remainingTime:number, accruedRelease:number, valve:Valve, visited:boolean, route:Valve[]};
+
+type QueueRecord = {remainingTime:number, accruedRelease:number, valve:Valve, visited:boolean, route:QueueRecord[]};
 class Cave {
   public days: number = 30;
   public current: Valve;
   public origin: Valve;
   public chart: Record<string, Valve> = {};
   public release: number = 0;
-  public winning?: Combo;
-  public combos :Combo[] = [];
+  
   constructor(public valves: Valve[]) {
     // some enrichment going on here...
     valves.forEach((v) => (this.chart[v.key] = v)); // populate cave chart
@@ -126,7 +61,6 @@ class Cave {
   public tick() {
     // this.release += this.valves.map((v) => v.tick()).reduce((p, c) => p + c, 0);
     this.days--;
-
   }
 
   //
@@ -164,7 +98,8 @@ class Cave {
         return b.accruedRelease - a.accruedRelease;
       }
       return b.remainingTime - a.remainingTime;
-    }  
+    }
+
     const beTheBest = (best:QueueRecord| undefined, contender:QueueRecord) => {
       if (!best) {
         return contender;
@@ -182,91 +117,60 @@ class Cave {
     let queue : QueueRecord[] = [];
     queue.push(<QueueRecord>{remainingTime:30, accruedRelease:0, valve:this.origin, visited:false, route:[]});
 
-    let best:QueueRecord|undefined = undefined;
-    let i=0;
-    let time =30;
+    let best: QueueRecord|undefined = undefined;
+    let loops=0;
+    let time = 30;
+    let now = new Date().getTime();
+    let iteration = now;
+    let start = now;
     while (queue.length) {
-      queue.sort(sortSolution);
+      // queue.sort(sortSolution);
       const max = queue.shift()!;
       max.visited = true;
-      if(time>max.remainingTime){
-        console.log(i, "max", max.remainingTime, max.accruedRelease,"queue", queue.length);
-        time=max.remainingTime;
+      if(time > max.remainingTime){
+        console.log(loops, "max", max.remainingTime, max.accruedRelease,"queue", queue.length);
+        time = max.remainingTime;
       }
-      if (max.remainingTime===0) {
+      if (max.remainingTime === 0) {
         // console.log("out of time ");
         best = beTheBest(best,max); 
       } else {
         const targets = Object.values(max.valve.neighbours)
-            .filter(n=>n.valve.rate>0)
-            .filter(n=>!max.route.includes(n.valve));
+            .filter(n => n.valve.rate > 0)
+            .filter(n => !max.route.map(r => r.valve).includes(n.valve))
+            .filter(n => n.distance < (max.remainingTime - 1));
         
         targets
         .forEach(r=>{
-          const remaining:number = Math.max(0, max.remainingTime - r.distance - 1);
-          const released:number = max.accruedRelease + (remaining * r.valve.rate);
-          queue.push(<QueueRecord>{remainingTime:remaining, accruedRelease: released, valve:r.valve, visited:false,route:[...max.route,max]});
+          const remaining: number = Math.max(0, max.remainingTime - r.distance - 1);
+          const released: number = max.accruedRelease + (remaining * r.valve.rate);
+          queue.push(<QueueRecord>{remainingTime: remaining, accruedRelease: released, valve: r.valve, visited: false, route: [...max.route, max]});
         });
 
-        if (targets.length===0) {
+        if (targets.length === 0) {
           // console.log("end of route"); 
           best = beTheBest(best,max);
         }
         // console.log(i, targets.length, queue.length);
       }
-      i++;
-      
+      loops++;
+      now = new Date().getTime();
+      if (now - iteration > 5000) {
+        iteration = now;
+        console.log({
+          loops, 
+          elapsed: (now - start) / 1000,
+          max: max.valve.toString(), 
+          rem: max.remainingTime, 
+          acc: max.accruedRelease,
+          q: queue.length, 
+          rt: max.route.map(v => v.valve.key).join(", ")
+        });
+      }
     }
     console.log(best);
     return best?.accruedRelease; 
   } 
-  findBestPotential() {
-    Object.values(this.origin.neighbours).map(v=>v.valve).forEach((v) => v.getPotential(this.current, this.days));
-    return this.valves.reduce(
-      (max, c) => (c.potential > max.potential ? c : max),
-      this.current,
-    );
-  } 
-  allTheRoutes() {
-    const list = Object.values(this.origin.neighbours).map(v=>v.valve).filter(v=>v.rate > 0);
-
-    const queue : {start:Valve[], remainder:Valve[]}[] =[];
-    queue.push({start:[], remainder:list});
-    let i =0;
-    let max = 0;
-    while (queue.length) {
-      const work = queue.pop();
-      if (work !== undefined) {
-        const newWork = this.getCombos(work.start,work.remainder);
-        if (newWork !== undefined) {
-          newWork.forEach(w=>queue.push(w));
-        }
-      }
-      i++;
-      if (queue.length > max){
-        console.log("new max ",i,queue.length);
-        max = queue.length;
-      }
-      if(i%1000000===0){console.log("Mark ",i/1000000,queue.length)}
-    }
-  }
-  getCombos(start:Valve[],remainder: Valve[]):{start:Valve[], remainder:Valve[]}[]|undefined {
-    if (remainder.length === 0) {
-      const combo = new Combo(start);
-      this.evaluate(combo);
-      return undefined
-    }
-    return remainder.map((v1, i, self): ({start:Valve[], remainder:Valve[]})=>{
-      return {start:[...start,v1],remainder:[...self.slice(0,i), ...self.slice(i+1)]};
-    }).flat();
-  }
-  evaluate(combo:Combo){
-    const released = combo.evaluate(this.origin);
-    if(!this.winning || this.winning.released < released) {
-      this.winning = combo;
-      console.log(`New Winner! ${combo.valves.map(v=>v.key).join(" ")} : ${combo.released}`);
-    }
-  }
 
   toString(){
     return this.valves.map(v=>v.toString()).join("\n") + "\n" + `Current: ${this.current.key}`
@@ -278,7 +182,7 @@ const parseInput = (rawInput: string): Cave => {
     .split(/\n/g)
     .map((line) => {
       const match =
-      /Valve (\w+) has flow rate=(\d+); tunnel.* lead.* to valve(?:s?) (.*)/
+      /Valve (\w+) has flow rate=(\d+); tunnel(?:s?) lead(?:s?) to valve(?:s?) (.*)/
       .exec(line)
       ?.slice(1);
       console.log(line,match)
@@ -290,11 +194,6 @@ const parseInput = (rawInput: string): Cave => {
 
 const part1 = (rawInput: string) => {
   const cave = parseInput(rawInput);
-  const best = cave.findBestPotential();
-  console.log(cave.toString(),"best",best)
-  
-  // cave.allTheRoutes();
-  // return cave.winning?.released;
   return cave.dijkstraSolution();
 };
 
@@ -330,11 +229,11 @@ run({
     tests: [
       {
         input: testInput,
-        expected: -1,
+        expected: 1707,
       },
     ],
     solution: part2,
   },
   trimTestInputs: true,
-  onlyTests: true,
+  // onlyTests: true,
 });
