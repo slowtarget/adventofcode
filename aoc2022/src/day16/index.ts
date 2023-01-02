@@ -56,7 +56,7 @@ class Cave {
     valves.forEach(
       (v) => (v.adjacent = v.adjacentKeys.map((key) => this.chart[key])),
     ); // upgrade links to objects
-    valves.forEach((v) => this.dijkstraDistances(v));
+    valves.forEach((v) => this.findDistances(v));
     this.origin = this.chart["AA"];
     // prune the network of broken valves ...
     // keep AA as its the start - but bin off all the other valves
@@ -84,7 +84,7 @@ class Cave {
     });
   }
 
-  dijkstraDistances(from: Valve) {
+  findDistances(from: Valve) {
     this.valves.forEach((v) => v.reset());
     from.distance = 0;
     let queue: Valve[] = [...this.valves];
@@ -106,7 +106,7 @@ class Cave {
       .forEach(n => from.neighbours[n.valve.key] = n);
   }
  
-  dijkstraSolution(minutes: number){
+  evaluate(minutes: number){
     this.valves.forEach((v) => v.reset());
     
     const beTheBest = (best:QueueRecord| undefined, contender:QueueRecord) => {
@@ -119,8 +119,6 @@ class Cave {
         return contender;
       }
     } 
-    // let bcj = this.stringToId("[BB, CC, JJ]");
-    // let deh = this.stringToId("[DD, EE, HH]");
 
     let queue : QueueRecord[] = [];
     queue.push({id: 0, remainingTime: minutes, accruedRelease: 0, visited: 0});
@@ -138,10 +136,6 @@ class Cave {
       if (combo === undefined || combo < next.accruedRelease) {
         this.combos[next.visited] = next.accruedRelease;
       }
-
-      // if ([bcj, deh].includes(next.visited)){
-      //   console.log(this.idToString(next.visited), next.accruedRelease, this.combos[next.visited] )
-      // }
 
       if (next.remainingTime === 0) {
         best = beTheBest(best, next); 
@@ -183,12 +177,6 @@ class Cave {
   bestCombo() {
     let best = {id: 0, id2: 0, value: 0, value2: 0, total: 0};
 
-    let bcj = this.combos[this.stringToId("[BB, CC, JJ]")];
-    let deh = this.combos[this.stringToId("[DD, EE, HH]")];
-
-    best.total = (bcj ?? 0) + (deh ?? 0);
-    console.log({bcj, deh, best});
-
     Object.entries(this.combos)
     .map(([id, value])=> ({id: Number(id), value}))
     .forEach(({id, value})=> {
@@ -200,7 +188,6 @@ class Cave {
           // disjoint sets
           const total = value + value2;
           if (total > best.total) {
-            // console.log(`new best ${total}\n  ${value} : ${this.idToString(id)}\n  ${value2} : ${this.idToString(id2)} `)
             best = {id, id2, value, value2, total};
           }
         }
@@ -261,12 +248,12 @@ const parseInput = (rawInput: string): Cave => {
 
 const part1 = (rawInput: string) => {
   const cave = parseInput(rawInput);
-  return cave.dijkstraSolution(30);
+  return cave.evaluate(30);
 };
 
 const part2 = (rawInput: string) => {
   const cave = parseInput(rawInput);
-  cave.dijkstraSolution(26);
+  cave.evaluate(26);
   return cave.bestCombo();
   // That's not the right answer; your answer is too high. (You guessed 3272.)
 };
@@ -330,5 +317,5 @@ Valve DD has flow rate=1; tunnels lead to valves CC`,
     solution: part2,
   },
   trimTestInputs: true,
-  // onlyTests: true,s
+  // onlyTests: true,
 });
