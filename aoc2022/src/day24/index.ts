@@ -6,6 +6,15 @@ interface DirRecord {
   dy: number;
 }
 
+const directions: Record<DirKey, DirRecord> = {
+  "^": { key: "^", dx: 0,  dy: -1},
+  ">": { key: ">", dx: 1,  dy: 0},
+  "<": { key: "<", dx: -1, dy: 0},
+  "v": { key: "v", dx: 0,  dy: 1},
+  ".": { key: ".", dx: 0,  dy: 0}, // wait
+};
+
+const dirKeys = Object.keys(directions).map(k => k as DirKey);
 class Point{
   public adjacent: Partial<Record<DirKey, Point>> = {};
   public wrapping: Partial<Record<DirKey, Point>> = {};
@@ -23,7 +32,6 @@ class Point{
     return `(${this.x},${this.y})`
   }
 }
-
 interface ITile {
   open: boolean;
   location: Point;
@@ -45,12 +53,12 @@ class Tile implements ITile{
   public cost: number = Infinity;
   public from?: ITile;
   public visited: boolean = false;
+  moves: Partial<Record<DirKey, { tile: OpenTile; facing: DirRecord; }>> ={};
+  
   constructor(
     public location: Point,
     public open: boolean,
   ){}
-
-  moves: Partial<Record<DirKey, { tile: OpenTile; facing: DirRecord; }>> ={};
 
   toString():string {
     throw new Error("not implemented");
@@ -105,16 +113,6 @@ class Blizzard {
     return `${this.direction}${this.tile.location.toString()}`
   }
 }
-
-const directions: Record<DirKey, DirRecord> = {
-  "^": { key: "^", dx: 0,  dy: -1},
-  ">": { key: ">", dx: 1,  dy: 0},
-  "<": { key: "<", dx: -1, dy: 0},
-  "v": { key: "v", dx: 0,  dy: 1},
-  ".": { key: ".", dx: 0,  dy: 0}, // wait
-};
-
-const dirKeys = Object.keys(directions).map(k => k as DirKey);
 
 const parseInput = (rawInput: string) => {
   const blizzards : Blizzard[] = [];
@@ -304,7 +302,8 @@ class Journey{
     while (this.queue.length > 0) {
       this.loops++;
       this.destinationCost = Math.min(...this.boards.map(board => board.get(this.destination.x, this.destination.y)!.cost));
-      const min = this.queue.sort((a, b) => a.tile.cost - b.tile.cost).shift()!;
+      // const min = this.queue.sort((a, b) => a.tile.cost - b.tile.cost).shift()!;
+      const min = this.queue.shift()!;
       if ((min.minute + min.tile.location.destinationManhatten) < this.destinationCost && !min.tile.visited) { // truncate any that won't make the grade
         min.tile.visited = true;
   
@@ -315,10 +314,6 @@ class Journey{
   
         if (moves === undefined) {
           throw new Error("moves undefined");
-        }
-  
-        if (Object.values(moves).length === 0) {
-          // console.log(`nowhere to go! ${min.minute}: ${min.tile.toString()}`);
         }
   
         Object.values(moves)
