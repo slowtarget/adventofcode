@@ -299,12 +299,12 @@ class Journey{
     this.queue.push({tile: originTile , minute: 0});
   }
   travel() { //dijkstra
+    this.destinationCost = Infinity;
     while (this.queue.length > 0) {
       this.loops++;
-      this.destinationCost = Math.min(...this.boards.map(board => board.get(this.destination.x, this.destination.y)!.cost));
       // const min = this.queue.sort((a, b) => a.tile.cost - b.tile.cost).shift()!;
       const min = this.queue.shift()!;
-      if ((min.minute + min.tile.location.destinationManhatten) < this.destinationCost && !min.tile.visited) { // truncate any that won't make the grade
+      if (!min.tile.visited && (min.minute + min.tile.location.destinationManhatten) < this.destinationCost ) { // truncate any that won't make the grade
         min.tile.visited = true;
   
         this.boards[min.minute] = (this.boards[min.minute] || nextBoard(this.boards[min.minute - 1]));
@@ -320,6 +320,9 @@ class Journey{
           .filter(m => !m.tile.visited)
           .forEach(m => {
             m.tile.cost = Math.min(m.tile.cost, min.minute + 1 + 4 * m.tile.location.destinationManhatten); // weighted to get a quick answer to start truncating
+            if (m.tile.location === this.destination) {
+              this.destinationCost = Math.min(this.destinationCost, m.tile.cost)
+            }
             this.queue.push({
               tile: m.tile,
               minute: min.minute + 1
