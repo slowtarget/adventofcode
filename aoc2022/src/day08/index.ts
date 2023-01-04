@@ -14,11 +14,18 @@ class Tree {
   constructor(public x: number, public y: number, public h: number) {}
 }
 class Forest {
-  public grid: Tree[][] = [];
+  constructor(
+    public grid: Tree[][]
+  ){
+    this.setNeighbours();
+    this.setVisible();
+  }
+
   public add(tree: Tree) {
     this.grid[tree.y] = this.grid[tree.y] || [];
     this.grid[tree.y][tree.x] = tree;
   }
+
   public setNeighbours = () => {
     this.grid.forEach((row) =>
       row.forEach((tree) => {
@@ -115,31 +122,20 @@ class Forest {
   }
 }
 const parseInput = (rawInput: string) => {
-  const input = rawInput
+  return new Forest(rawInput
     .replace(/\r\n/g, "\n")
     .split(/\n/g)
-    .map((s) => s.split("").map(Number));
-  const forest = new Forest();
-  input.forEach((row: number[], y: number) => {
-    row.forEach((height: number, x: number) => {
-      forest.add(new Tree(x, y, height));
-    });
-  });
-  forest.setNeighbours();
-  forest.setVisible();
-  return forest;
+    .map((s, y) => s.split("").map((h, x) => new Tree(x, y, Number(h)))));
 };
-
+let forest: Forest;
 const part1 = (rawInput: string) => {
-  const input = parseInput(rawInput);
+  forest = parseInput(rawInput);
 
-  return input.countVisible();
+  return forest.countVisible();
 };
 
 const part2 = (rawInput: string) => {
-  const input = parseInput(rawInput);
-
-  return input.topScenic();
+  return forest.topScenic();
 };
 
 const testInput = `
