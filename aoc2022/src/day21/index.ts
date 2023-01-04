@@ -1,96 +1,68 @@
 import run from "aocrunner";
-class Op {
-  constructor(public first: number, public second: number) {}
-  op(): number {
-    throw new Error("not implemented");
+
+type Op = (a: number, b: number) => number;
+const getOp = (operation: string): Op =>  {
+  switch (operation) {
+    case "+":
+      return (a: number, b:number) => a + b;
+    case "-":
+      return (a: number, b:number) => a - b;
+    case "/":
+      return (a: number, b:number) => a / b;
+    case "*":
+      return (a: number, b:number) => a * b;
+    default:
+      throw new Error(`unrecognised operation : ${operation}`);
   }
 }
-class Plus extends Op {
-  constructor(first: number, second: number) {
-    super(first, second);
-  }
-  op() {
-    return this.first + this.second;
-  }
-}
-class Minus extends Op {
-  constructor(first: number, second: number) {
-    super(first, second);
-  }
-  op() {
-    return this.first - this.second;
-  }
-}
-class Divide extends Op {
-  constructor(first: number, second: number) {
-    super(first, second);
-  }
-  op() {
-    return this.first / this.second;
-  }
-}
-class Multiply extends Op {
-  constructor(first: number, second: number) {
-    super(first, second);
-  }
-  op() {
-    return this.first * this.second;
-  }
-}
-class OpFactory {
-  constructor(
-    public operation: string,
-    public first: number,
-    public second: number,
-  ) {}
-  get() {
-    switch (this.operation) {
-      case "+":
-        return new Plus(this.first, this.second);
-      case "-":
-        return new Minus(this.first, this.second);
-      case "/":
-        return new Divide(this.first, this.second);
-      case "*":
-        return new Multiply(this.first, this.second);
-    }
-  }
-}
+
 class Monkey {
   public num?: number;
   public resolved: boolean = false;
-  constructor(public name: string) {}
+  constructor(
+    public id: number,
+    public name: string
+    ) {}
+  get(): number {
+    throw new Error("not implemented");
+  }
 }
 class MonkeyNum extends Monkey {
-  constructor(name: string, num: number) {
-    super(name);
+  constructor(id:number, name: string, num: number) {
+    super(id, name);
     this.num = num;
     this.resolved = true;
+  }
+  get(): number {
+    if (this.num === undefined) {
+      throw new Error("num undefined on MonkeyNum");
+    }
+    return this.num;
   }
 }
 class MonkeyOp extends Monkey {
   public monkey1?: Monkey;
   public monkey2?: Monkey;
+  public op: Op;
   constructor(
+    id: number,
     name: string,
-    public op: string,
+    operation: string,
     public first: string,
     public second: string,
   ) {
-    super(name);
+    super(id, name);
+    this.op = getOp(operation);
   }
-  resolve(): boolean {
-    if (this.monkey1?.resolved && this.monkey2?.resolved) {
-      const op = new OpFactory(
-        this.op,
-        this.monkey1.num!,
-        this.monkey2.num!,
-      ).get();
-      this.num = op?.op();
-      this.resolved = true;
-      return true;
+
+  get(): number {
+    if (this.monkey1 === undefined) {
+      throw new Error("monkey1 undefined on MonkeyOp");
     }
-    return false;
+    if (this.monkey2 === undefined) {
+      throw new Error("monkey2 undefined on MonkeyOp");
+    }
+    return this.op(this.monkey1.get(), this.monkey2.get());
   }
 }
 class Business {
@@ -108,33 +80,12 @@ class Business {
 
   root() {
     const root = this.monkeyMap["root"];
-    return this.discover(root);
+    return root.get();
   }
-  discover(root: Monkey) {
-    const stack: Monkey[] = [];
-    this.monkeys
-      .filter((m) => m instanceof MonkeyOp)
-      .forEach((m) => (m.resolved = false));
-    stack.push(root);
-    while (stack.length) {
-      const m = stack.pop();
-      if (m && !m.resolved && m instanceof MonkeyOp) {
-        if (!m.resolve()) {
-          stack.push(m);
-          if (!m.monkey1?.resolved) {
-            stack.push(m.monkey1!);
-          }
-          if (!m.monkey2?.resolved) {
-            stack.push(m.monkey2!);
-          }
-        }
-      }
-    }
-    return root.num;
-  }
+
   getLeftFor(humnValue: number, humn: Monkey, rootMonkey: Monkey) {
     humn.num = humnValue;
-    return this.discover(rootMonkey);
+    return rootMonkey.get();
   }
 
   humn() {
@@ -143,9 +94,7 @@ class Business {
     const rootRight = (root as MonkeyOp).monkey2!;
     const humn = this.monkeyMap["humn"];
 
-    const target = this.discover(rootRight)!;
-
-    let found = false;
+    const target = rootRight.get();
 
     let low = Number.MIN_SAFE_INTEGER;
     let high = Number.MAX_SAFE_INTEGER;
@@ -170,7 +119,7 @@ class Business {
     while (low !== high && loops < 100) {
       let guess = Math.floor((high + low)/2);
       let guessValue = this.getLeftFor(guess, humn, rootLeft)! - target;
-      console.log({loops, guess, guessValue});
+      // console.log({loops, guess, guessValue});
 
       if (guessValue === 0) {
         return guess;
@@ -192,26 +141,25 @@ const parseInput = (rawInput: string) => {
     rawInput
       .replace(/\r\n/g, "\n")
       .split(/\n/g)
-      .map((line) => {
+      .map((line, id) => {
         const [name, job] = line.split(/: /);
         const [first, operation, second] = job.split(/ /);
         if (operation) {
-          return new MonkeyOp(name, operation, first, second);
+          return new MonkeyOp(id, name, operation, first, second);
         } else {
-          return new MonkeyNum(name, Number(first));
+          return new MonkeyNum(id, name, Number(first));
         }
       }),
   );
 };
 
+let business: Business;
 const part1 = (rawInput: string) => {
-  const business = parseInput(rawInput);
-
+  business = parseInput(rawInput);
   return business.root();
 };
 
 const part2 = (rawInput: string) => {
-  const business = parseInput(rawInput);
   return business.humn();
 };
 
