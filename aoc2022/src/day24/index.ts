@@ -302,6 +302,7 @@ class Journey{
     this.destinationCost = Infinity;
     while (this.queue.length > 0) {
       this.loops++;
+      // sorting reduces the number of loops needed by 3/4 but doubles the time taken.
       // const min = this.queue.sort((a, b) => a.tile.cost - b.tile.cost).shift()!;
       const min = this.queue.shift()!;
       if (!min.tile.visited && (min.minute + min.tile.location.destinationManhatten) < this.destinationCost ) { // truncate any that won't make the grade

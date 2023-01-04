@@ -132,47 +132,57 @@ class Business {
     }
     return root.num;
   }
+  getLeftFor(humnValue: number, humn: Monkey, rootMonkey: Monkey) {
+    humn.num = humnValue;
+    return this.discover(rootMonkey);
+  }
+
   humn() {
     const root = this.monkeyMap["root"];
-    const root1 = (root as MonkeyOp).monkey1;
-    const root2 = (root as MonkeyOp).monkey2;
+    const rootLeft = (root as MonkeyOp).monkey1!;
+    const rootRight = (root as MonkeyOp).monkey2!;
     const humn = this.monkeyMap["humn"];
-    const rootMonkeys = [root1];
-    // 301,
 
-    const start = 3876027196180;
-    const mult = 1;
-    const digits = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-    console.log("log10 start", Math.floor(Math.log10(start)));
-    const units = mult;
-    const humnValues = digits.map((d) => d * units + start * mult);
-    const target = this.discover(root2!)!;
-    let prev = 0;
-    let prevd = 0;
-    console.log(`target : ${target.toExponential()}`);
-    rootMonkeys.map((r) => {
-      console.table(
-        humnValues.map((h) => {
-          humn.num = h;
-          const found = this.discover(r!)!;
-          const delta = target - found;
-          console.table;
-          const prevdelta = Math.abs(prevd - delta);
-          const move = Math.abs(found - prev);
-          prevd = delta;
-          prev = found;
-          return {
-            name: r?.name,
-            humn: h,
-            found: found.toExponential(),
-            move: move.toExponential(),
-            delta: delta.toExponential(),
-            units: units.toExponential(),
-            prevdelta: prevdelta.toExponential(),
-          };
-        }),
-      );
-    });
+    const target = this.discover(rootRight)!;
+
+    let found = false;
+
+    let low = 0;
+    let high = 999999999999999;
+
+    let loValue = this.getLeftFor(low, humn, rootLeft)! - target;
+    let hiValue = this.getLeftFor(high, humn, rootLeft)! - target;
+
+    if (loValue > 0 ) {
+      let swap = loValue;
+      loValue = hiValue;
+      hiValue = swap;
+      swap = low;
+      low = high;
+      high = swap;
+    }
+
+    if ((loValue < 0 && hiValue < 0) || (loValue > 0 && hiValue > 0)) {
+        throw new Error(`\nta: ${target}\nlo: ${low} ${loValue} \nhi: ${high} ${hiValue} are both the same side of zero...`)
+    }
+
+    let loops = 0;
+    while (!found && loops < 100) {
+      let guess = Math.floor((high + low)/2);
+      let guessValue = this.getLeftFor(guess, humn, rootLeft)! - target;
+      console.log({loops, guess, guessValue});
+
+      if (guessValue === 0) {
+        return guess;
+      } 
+
+      if (guessValue > 0) {
+        high = guess
+      } else {
+        low = guess
+      }
+      loops ++;
+    }
   }
 }
 const parseInput = (rawInput: string) => {
@@ -200,8 +210,7 @@ const part1 = (rawInput: string) => {
 
 const part2 = (rawInput: string) => {
   const business = parseInput(rawInput);
-  // business.humn();
-  return 3876027196185;
+  return business.humn();
 };
 
 const testInput = `
@@ -235,7 +244,7 @@ run({
     tests: [
       {
         input: testInput,
-        expected: -1,
+        expected: 301,
       },
     ],
     solution: part2,
