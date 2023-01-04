@@ -10,13 +10,13 @@
         "attempts": [
           "0"
         ],
-        "time": 0.7977
+        "time": 0.2895
       },
       "part2": {
         "solved": true,
         "result": "210957",
         "attempts": [],
-        "time": 0.3461
+        "time": 0.5341
       }
     },
     {
