@@ -147,8 +147,8 @@ class Business {
 
     let found = false;
 
-    let low = 0;
-    let high = 999999999999999;
+    let low = Number.MIN_SAFE_INTEGER;
+    let high = Number.MAX_SAFE_INTEGER;
 
     let loValue = this.getLeftFor(low, humn, rootLeft)! - target;
     let hiValue = this.getLeftFor(high, humn, rootLeft)! - target;
@@ -167,7 +167,7 @@ class Business {
     }
 
     let loops = 0;
-    while (!found && loops < 100) {
+    while (low !== high && loops < 100) {
       let guess = Math.floor((high + low)/2);
       let guessValue = this.getLeftFor(guess, humn, rootLeft)! - target;
       console.log({loops, guess, guessValue});
@@ -177,12 +177,14 @@ class Business {
       } 
 
       if (guessValue > 0) {
-        high = guess
+        high = guess;
       } else {
-        low = guess
+        low = guess;
       }
+
       loops ++;
     }
+    return low;
   }
 }
 const parseInput = (rawInput: string) => {
