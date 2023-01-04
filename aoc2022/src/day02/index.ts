@@ -4,71 +4,51 @@ const parseInput = (rawInput: string) => {
   return rawInput
     .replace(/\r\n/g, "\n")
     .split(/\n/g)
-    .map((line) => line.split(/ /));
+    .map((line) => line.split(/ /))
+    .map(([play, response]) => ({play: playMap[play], response: responseMap[response], outcome: outcomeMap[response]}));
 };
 // A X R ock
 // B Y P aper
 // C Z S cissors
-const R = "R";
-const P = "P";
-const S = "S";
 
-type Shape = "R" | "P" | "S";
-type Outcome = "W" | "L" | "D";
+enum Outcome {
+  W = 6,
+  D = 3,
+  L = 0
+}
+enum Shape {
+  R = 1,
+  P = 2,
+  S = 3
+}
+const playMap: Record<string, Shape> = { A: Shape.R, B: Shape.P, C: Shape.S };
 
-const playMap: Record<string, Shape> = { A: R, B: P, C: S };
-
-const responseMap: Record<string, Shape> = { X: R, Y: P, Z: S };
-
-const outcomeMap: Record<string, Outcome> = { X: "L", Y: "D", Z: "W" };
-
-const shapeScore: Record<Shape, number> = { R: 1, P: 2, S: 3 };
-
-const outcomeScore: Record<Outcome, number> = { W: 6, D: 3, L: 0 };
+const responseMap: Record<string, Shape> = { X: Shape.R, Y: Shape.P, Z: Shape.S };
+const outcomeMap: Record<string, Outcome> = { X: Outcome.L, Y: Outcome.D, Z: Outcome.W };
 
 const outcomePicker: Record<Shape, Record<Shape, Outcome>> = {
-  R: { R: "D", P: "W", S: "L" },
-  P: { R: "L", P: "D", S: "W" },
-  S: { R: "W", P: "L", S: "D" },
+  [Shape.R]: { [Shape.R]: Outcome.D, [Shape.P]: Outcome.W, [Shape.S]: Outcome.L },
+  [Shape.P]: { [Shape.R]: Outcome.L, [Shape.P]: Outcome.D, [Shape.S]: Outcome.W },
+  [Shape.S]: { [Shape.R]: Outcome.W, [Shape.P]: Outcome.L, [Shape.S]: Outcome.D },
 };
-
 const responsePicker: Record<Shape, Record<Outcome, Shape>> = {
-  R: { L: S, D: R, W: P },
-  P: { L: R, D: P, W: S },
-  S: { L: P, D: S, W: R },
+  [Shape.R]: { [Outcome.L]: Shape.S, [Outcome.D]: Shape.R, [Outcome.W]: Shape.P },
+  [Shape.P]: { [Outcome.L]: Shape.R, [Outcome.D]: Shape.P, [Outcome.W]: Shape.S },
+  [Shape.S]: { [Outcome.L]: Shape.P, [Outcome.D]: Shape.S, [Outcome.W]: Shape.R },
 };
 
+let input : {play: Shape, response: Shape, outcome: Outcome}[];
 const part1 = (rawInput: string) => {
-  const input = parseInput(rawInput);
-  const result = input
-    .map((round) => {
-      const [playIn, responseIn] = round;
-      const play = playMap[playIn];
-      const response = responseMap[responseIn];
-
-      const outcome: Outcome = outcomePicker[play][response];
-      const score = outcomeScore[outcome] + shapeScore[response];
-      return score;
-    })
+  input = parseInput(rawInput);
+  return input
+    .map(({play, response}) => outcomePicker[play][response] + response)
     .reduce((p, c) => p + c, 0);
-  return result;
 };
 
 const part2 = (rawInput: string) => {
-  const input = parseInput(rawInput);
-  const result = input
-    .map((round) => {
-      const [playIn, outcomeIn] = round;
-
-      const play = playMap[playIn];
-      const outcome = outcomeMap[outcomeIn];
-
-      const response = responsePicker[play][outcome];
-      const score = outcomeScore[outcome] + shapeScore[response];
-      return score;
-    })
+  return input
+    .map(({play, outcome}) => outcome + responsePicker[play][outcome])
     .reduce((p, c) => p + c, 0);
-  return result;
 };
 
 const testInput = `
