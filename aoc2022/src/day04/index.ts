@@ -25,7 +25,9 @@ class Pair {
   a: Range;
   b: Range;
 
-  constructor(pair: number[][]) {
+  constructor(
+    pair: number[][]
+    ) {
     [this.a, this.b] = pair.map((p) => new Range(p));
   }
 }
@@ -37,30 +39,27 @@ const parseInput = (rawInput: string) => {
     .map((line) => line.split(",").map((pair) => pair.split("-").map(Number)))
     .map((x) => new Pair(x));
 };
-
+let input: Pair[];
 const part1 = (rawInput: string) => {
-  const input = parseInput(rawInput);
+  input = parseInput(rawInput);
   const start: number = 0;
-  const result: number = input
-    .map((line) => {
-      if (line.a.contains(line.b) || line.b.contains(line.a)) {
+  return input
+    .map((pair) => {
+      if (pair.a.contains(pair.b) || pair.b.contains(pair.a)) {
         return 1;
       }
       return 0;
     })
     .reduce((p, c) => p + c, start);
-  return result;
 };
 
 const part2 = (rawInput: string) => {
-  const input = parseInput(rawInput);
   const start: number = 0;
-  const result: number = input
-    .map((line) => {
-      return line.a.intersects(line.b) ? 1 : 0;
+  return input
+    .map((pair) => {
+      return pair.a.intersects(pair.b) ? 1 : 0;
     })
     .reduce((p, c) => p + c, start);
-  return result;
 };
 
 const testInput = `
