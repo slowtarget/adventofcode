@@ -1,75 +1,90 @@
 import run from "aocrunner";
 
 const parseInput = (rawInput: string) => {
-  return rawInput.replace(/\r\n/g, "\n").split(/\n/g);
+  return rawInput
+    .replace(/\r\n/g, "\n")
+    .split(/\n/g)
+    .map((line) => {
+      const len = line.length / 2;
+      const parts = [line.substring(0, len), line.substring(len)];
+      return parts.map(getCandidates);
+    });
 };
 // Lowercase item types a through z have priorities 1 through 26.
 // Uppercase item types A through Z have priorities 27 through 52.
 // UTF-16 A-Z: 65-90 a-z: 97-122
-const priorities = [...Array.from({ length: 52 }, (_, i) => i + 1)]; // [1,2,3, ... 52]
 
-const getPriority = (utf16: number) => {
+const getPriority = (utf16: number): [number, boolean] => {
   if (utf16 > 90) {
-    return utf16 - 97 + 1;
+    return [1 << (utf16 - 97 + 1), false];
   }
-  return utf16 - 65 + 27;
+  return [1 << (utf16 - 65 + 1), true];
 };
 
 const getCandidates = (line: string) => {
-  let candidates = new Array<boolean>(53);
+  let upperBits: number = 0;
+  let lowerBits: number = 0;
+
   for (let i = 0; i < line.length; i++) {
-    const priority = getPriority(line.charCodeAt(i));
-    candidates[priority] = true;
-  }
-  return [...candidates];
-};
-
-const chunk = <T>(size: number, list: T[]): T[][] => {
-  const start: T[][] = [];
-  return list.reduce((acc, curr, i, self) => {
-    if (!(i % size)) {
-      return [...acc, self.slice(i, i + size)];
+    const [mask, upper] = getPriority(line.charCodeAt(i));
+    if (upper) {
+      upperBits = upperBits | mask;
+    } else {
+      lowerBits = lowerBits | mask;
     }
-    return acc;
-  }, start);
+    // console.log(`${line.charAt(i)} u: ${upperBits.toString(2)} l: ${lowerBits.toString(2)}`)
+  }
+  // console.log(`u: ${upperBits.toString(2)}\n l: ${lowerBits.toString(2)}`)
+  return [lowerBits, upperBits];
 };
 
-function allPresent(
-  candidates: boolean[][],
-): (value: number, index: number, obj: number[]) => unknown {
-  return (i) => candidates.every((candidate) => candidate[i]);
-}
+const getScore = (lower: number, upper: number): number => {
+  let priority = 0;
+  if (lower === 0) {
+    priority = 26;
+  } else {
+    upper = lower;
+  }
 
+  let shift = 0;
+  while (((upper >>> shift) & 1) === 0) {
+    shift++;
+    priority++;
+  }
+
+  return priority;
+};
+
+let input: number[][][];
 const part1 = (rawInput: string) => {
-  const input = parseInput(rawInput);
-  let result = input
-    .map((line) => {
-      let parts = [
-        line.substring(0, line.length / 2),
-        line.substring(line.length / 2),
-      ];
-      let candidates = parts.map(getCandidates);
-      return (
-        priorities.find((i) => candidates.every((candidate) => candidate[i])) ||
-        0
-      );
+  input = parseInput(rawInput);
+  return input
+    .map((candidates) => {
+      const lower = candidates[0][0] & candidates[1][0];
+      let upper = candidates[0][1] & candidates[1][1];
+
+      return getScore(lower, upper);
     })
     .reduce((p, c) => p + c, 0);
-
-  return result;
 };
 
 const part2 = (rawInput: string) => {
-  const input = parseInput(rawInput);
+  let sum = 0;
+  const chunks = input.length / 3;
 
-  let result = chunk(3, input)
-    .map((group) => {
-      let candidates = group.map((line) => getCandidates(line));
-      return priorities.find(allPresent(candidates)) || 0;
-    })
-    .reduce((p, c) => p + c, 0);
+  for (let i = 0; i < chunks; i++) {
+    const first = i * 3;
+    const unsplit = [0, 1, 2]
+      .map((line) => input[first + line])
+      .map((line) => [0, 1].map((range) => line[0][range] | line[1][range])); // rejoin the parts... split for part1
 
-  return result;
+    const [lower, upper] = [0, 1].map(
+      (range) => unsplit[0][range] & unsplit[1][range] & unsplit[2][range],
+    );
+    sum += getScore(lower, upper);
+  }
+
+  return sum;
 };
 
 const testInput = `
@@ -100,5 +115,5 @@ run({
     solution: part2,
   },
   trimTestInputs: true,
-  onlyTests: true,
+  // onlyTests: true,
 });
