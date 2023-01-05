@@ -122,19 +122,19 @@ const part2 = (rawInput: string) => {
   let y = 0;
   let found = false;
   while (y <= max && !found) {
-    line = new Set<Range>();
+    
     // console.log(y,"1",input.map((sensor) => sensor.intersectX(y)))
     // console.log(y,"2",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined))
     // console.log(y,"3",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined).filter((r) => r!.min < max))
     // console.log(y,"4",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined).filter((r) => r!.min < max).map((r) => (r?.max! > max ? new Range(r!.min, max) : r!)))
     // console.log(y,"5",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined).filter((r) => r!.min < max).map((r) => (r?.max! > max ? new Range(r!.min, max) : r!)).map((r) => (r?.min! < 0 ? new Range(0, r.max) : r!)))
-    cave.layout
+    const ranges = cave.layout
       .map((sensor) => sensor.intersectX(y))
       .filter((r) => r !== undefined)
       .filter((r) => r!.min < max)
       .map((r) => (r?.max! > max ? new Range(r!.min, max) : r!))
-      .map((r) => (r?.min! < 0 ? new Range(0, r.max) : r!))
-      .forEach((r) => line.add(r));
+      .map((r) => (r?.min! < 0 ? new Range(0, r.max) : r!));
+    line = new Set<Range>(ranges);
     
     let unionsFound = true;
     let looped = 0;

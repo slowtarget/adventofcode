@@ -167,9 +167,9 @@ Both parts: 87.995ms
 
 ```
 Day 15
-Time part 1: 3882.029ms
-Time part 2: 5895.589ms
-Both parts: 9777.618ms
+Time part 1: 3882.347ms
+Time part 2: 5861.304ms
+Both parts: 9743.651ms
 ```
 
 ```
@@ -244,7 +244,7 @@ Both parts: 1.882ms
 
 ```
 Total stars: 51/50
-Total time: 169789.016ms
+Total time: 169755.049ms
 ```
 
 <!--/RESULTS-->
