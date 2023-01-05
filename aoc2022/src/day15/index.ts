@@ -4,6 +4,9 @@ class Point {
   manhatten(other: Point) {
     return Math.abs(this.x - other.x) + Math.abs(this.y - other.y);
   }
+  toString() {
+    return `(${this.x},${this.y})`;
+  }
 }
 class Range {
   constructor(public min: number, public max: number) {
@@ -15,16 +18,20 @@ class Range {
   intersects(other: Range) {
     return (
       (this.min <= other.max && this.min >= other.min) ||
-      (this.max <= other.max && this.max >= other.min) 
+      (this.max <= other.max && this.max >= other.min)
     );
   }
 
   contains(other: Range) {
-    return (this.max >= other.max && this.min <= other.min);
+    return this.max >= other.max && this.min <= other.min;
   }
 
   union(other: Range) {
-    if (this.intersects(other) || this.contains(other) || other.contains(this)) {
+    if (
+      this.intersects(other) ||
+      this.contains(other) ||
+      other.contains(this)
+    ) {
       return new Range(
         Math.min(this.min, other.min),
         Math.max(this.max, other.max),
@@ -35,11 +42,37 @@ class Range {
 }
 class Sensor {
   public range: number;
-  constructor(
-    public location: Point, 
-    public closest: Beacon
-    ) {
+  constructor(public location: Point, public closest: Beacon) {
     this.range = location.manhatten(closest.point);
+  }
+
+  getJustOutOfRange(offTheMap: number): Point[] {
+    const { x, y } = this.location;
+    const range = this.range;
+    const limit = range + 1;
+    const result: Point[] = [
+      new Point(x, y + limit),
+      new Point(x, y - limit),
+      new Point(x + limit, y),
+      new Point(x - limit, y),
+    ];
+
+    for (let i = 1; i < limit; i++) {
+      const n = y + i;
+      const s = y - i;
+      const e = x + (limit - i);
+      const w = x - (limit - i);
+      result.push(
+        new Point(e, n),
+        new Point(w, n),
+        new Point(e, s),
+        new Point(w, s),
+      );
+    }
+    const filtered = result
+      .filter((p) => p.x >= 0 && p.x <= offTheMap)
+      .filter((p) => p.y >= 0 && p.y <= offTheMap);
+    return filtered;
   }
 
   intersectX(y: number): Range | undefined {
@@ -52,37 +85,45 @@ class Sensor {
     return new Range(this.location.x - overrun, this.location.x + overrun);
   }
 
+  sees(candidate: Point) {
+    const dx = Math.abs(candidate.x - this.location.x);
+    if (dx > this.range) return false;
+    const dy = Math.abs(candidate.y - this.location.y);
+    if (dy > this.range) return false;
+    return (dx + dy) <= this.range;
+  }
+
   toString() {
-    return `Sensor (${this.location.x},${this.location.y}) -- ${this.range} --> ${this.closest.toString()} `;
+    return `Sensor ${this.location.toString()} -- ${this.range} --> ${this.closest.toString()} `;
   }
 }
 class Beacon {
   constructor(public point: Point) {}
   toString() {
-    return `Beacon (${this.point.x},${this.point.y})`;
+    return `Beacon ${this.point.toString()}`;
   }
 }
 class Cave {
-  constructor(
-    public layout: Sensor[]
-  ){}
+  constructor(public layout: Sensor[]) {}
 
   toString() {
-    return this.layout.map(s => s.toString()).join("\n");
+    return this.layout.map((s) => s.toString()).join("\n");
   }
 }
 const parseInput = (rawInput: string): Cave => {
-  const regExp = new RegExp(/Sensor at x=(.*), y=(.*): closest beacon is at x=(.*), y=(.*)/);
-  return new Cave(rawInput 
-    .replace(/\r\n/g, "\n")
-    .split(/\n/g)
-    .map((line) => {
-      const match = regExp.exec(line)!
-          .slice(1)
-          .map(Number);
-      const beacon = new Beacon(new Point(match[2], match[3]));
-      return new Sensor(new Point(match[0], match[1]), beacon);
-    }));
+  const regExp = new RegExp(
+    /Sensor at x=(.*), y=(.*): closest beacon is at x=(.*), y=(.*)/,
+  );
+  return new Cave(
+    rawInput
+      .replace(/\r\n/g, "\n")
+      .split(/\n/g)
+      .map((line) => {
+        const match = regExp.exec(line)!.slice(1).map(Number);
+        const beacon = new Beacon(new Point(match[2], match[3]));
+        return new Sensor(new Point(match[0], match[1]), beacon);
+      }),
+  );
 };
 //4000000 and then adding its y coordinate.
 const tuningFrequency = (x: number, y: number) => {
@@ -114,89 +155,31 @@ const part1 = (rawInput: string, inputY?: number) => {
 };
 
 const part2 = (rawInput: string) => {
-  // test
-  // const max = 20;
   const max = cave.layout.length === 14 ? 20 : 4000000;
-  let line = new Set<Range>();
-  // mark the sensor hits on the line
-  let y = 0;
-  let found = false;
-  while (y <= max && !found) {
-    
-    // console.log(y,"1",input.map((sensor) => sensor.intersectX(y)))
-    // console.log(y,"2",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined))
-    // console.log(y,"3",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined).filter((r) => r!.min < max))
-    // console.log(y,"4",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined).filter((r) => r!.min < max).map((r) => (r?.max! > max ? new Range(r!.min, max) : r!)))
-    // console.log(y,"5",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined).filter((r) => r!.min < max).map((r) => (r?.max! > max ? new Range(r!.min, max) : r!)).map((r) => (r?.min! < 0 ? new Range(0, r.max) : r!)))
-    const ranges = cave.layout
-      .map((sensor) => sensor.intersectX(y))
-      .filter((r) => r !== undefined)
-      .filter((r) => r!.min < max)
-      .map((r) => (r?.max! > max ? new Range(r!.min, max) : r!))
-      .map((r) => (r?.min! < 0 ? new Range(0, r.max) : r!));
-    line = new Set<Range>(ranges);
-    
-    let unionsFound = true;
-    let looped = 0;
-    // console.log(y,looped,"merging these: ", line.size)
-    while (unionsFound) {
-      looped++;
-      unionsFound = false;
-      const copy = [...line.values()] //.sort((a, b)=> a.min - b.min);
-      line = new Set<Range>();
-      let merged: number[] = [];
-      
-      for (let i = 0; i < copy.length; i++) {
-        let unions: Range[] = [];
-        if (merged.includes(i)) {
-          //skip
-        } else {
-          for (let j = i + 1; j < copy.length; j++) {
-            if (i !== j) {
-              let union = copy[i].union(copy[j]);
-              if (union) {
-                // console.log(y,looped,i, "merging ",j)
-                unions.push(union);
-                merged.push(j);
-              }
-            }
-          }
-        }
-        if (unions.length) {
-          // console.log(y,looped,i, "unions found!",unions);
-          let merge : Range = unions.pop()!;
-          unions.forEach(r => merge = merge!.union(r)!);
-          // console.log(y,looped,i,"unions merged!",merge,line.size);
-          line.add(merge!);
-          unionsFound = true;
-        } else {
-          // console.log(y,looped,i,"no union here!",line.size,merged);
-          if(merged.includes(i)) {
-            //skip
-          } else {
-            line.add(copy[i]);
-          }
-        }
+
+  for (let i = 0; i < cave.layout.length; i++) {
+    let candidates = cave.layout[i].getJustOutOfRange(max);
+    for (let j = 0; j < cave.layout.length; j++) {
+      if (j !== i) {
+        candidates = candidates.filter(
+          (candidate) => !cave.layout[j].sees(candidate),
+        );
       }
-      // console.log(y,looped,"loop done", unionsFound, line.size, line)
     }
-    // console.log({looped});
-    // console.log(y,"loop done",line.size,line)
-    if (line.size > 1){
-      found = true;
-    } else {
-      y++;
+    if (candidates.length === 1) {
+      let result = candidates[0];
+      return tuningFrequency(result.x, result.y);
+    }
+    if (candidates.length > 0) {
+      throw new Error(
+        `more than one candidate... sensor: ${cave.layout[
+          i
+        ].toString()}\n${candidates.map((p) => p.toString()).join("\n")} `,
+      );
     }
   }
-  
-  let result = Array.from(line)
-  result.sort((a,b)=>a.min-b.min);
-  // console.log(result);
-  let x = result[0].max+1;
-  // console.log(`found at (${x},${y})`);
-  return tuningFrequency(x, y);
+  throw new Error("not found");
 };
-
 const testInput = `
 Sensor at x=2, y=18: closest beacon is at x=-2, y=15
 Sensor at x=9, y=16: closest beacon is at x=10, y=16
