@@ -18,9 +18,11 @@ class Range {
       (this.max <= other.max && this.max >= other.min) 
     );
   }
+
   contains(other: Range) {
     return (this.max >= other.max && this.min <= other.min);
   }
+
   union(other: Range) {
     if (this.intersects(other) || this.contains(other) || other.contains(this)) {
       return new Range(
@@ -33,20 +35,25 @@ class Range {
 }
 class Sensor {
   public range: number;
-  constructor(public point: Point, public closest: Beacon) {
-    this.range = point.manhatten(closest.point);
+  constructor(
+    public location: Point, 
+    public closest: Beacon
+    ) {
+    this.range = location.manhatten(closest.point);
   }
+
   intersectX(y: number): Range | undefined {
     // given y, what range of x values can this sensor sense on that line?
-    const distanceY = Math.abs(y - this.point.y);
+    const distanceY = Math.abs(y - this.location.y);
     if (distanceY > this.range) {
       return undefined; // completely out of range
     }
     const overrun = this.range - distanceY;
-    return new Range(this.point.x - overrun, this.point.x + overrun);
+    return new Range(this.location.x - overrun, this.location.x + overrun);
   }
+
   toString() {
-    return `Sensor (${this.point.x},${this.point.y}) -- ${this.range} --> ${this.closest.toString} `;
+    return `Sensor (${this.location.x},${this.location.y}) -- ${this.range} --> ${this.closest.toString()} `;
   }
 }
 class Beacon {
@@ -55,31 +62,42 @@ class Beacon {
     return `Beacon (${this.point.x},${this.point.y})`;
   }
 }
-const parseInput = (rawInput: string):Sensor[] => {
-  return rawInput 
+class Cave {
+  constructor(
+    public layout: Sensor[]
+  ){}
+
+  toString() {
+    return this.layout.map(s => s.toString()).join("\n");
+  }
+}
+const parseInput = (rawInput: string): Cave => {
+  const regExp = new RegExp(/Sensor at x=(.*), y=(.*): closest beacon is at x=(.*), y=(.*)/);
+  return new Cave(rawInput 
     .replace(/\r\n/g, "\n")
     .split(/\n/g)
     .map((line) => {
-      const match =
-        /Sensor at x=(.*), y=(.*): closest beacon is at x=(.*), y=(.*)/
-          .exec(line)
-          ?.slice(1)
-          .map(Number)!;
+      const match = regExp.exec(line)!
+          .slice(1)
+          .map(Number);
       const beacon = new Beacon(new Point(match[2], match[3]));
       return new Sensor(new Point(match[0], match[1]), beacon);
-    });
+    }));
 };
 //4000000 and then adding its y coordinate.
 const tuningFrequency = (x: number, y: number) => {
   return x * 4000000 + y;
 };
-const part1 = (rawInput: string) => {
-  const input = parseInput(rawInput);
+
+let cave: Cave;
+const part1 = (rawInput: string, inputY?: number) => {
+  cave = parseInput(rawInput);
+  // console.log(cave.toString());
   // const y = 10;
-  const y = 2000000;
+  const y = cave.layout.length === 14 ? 10 : 2000000;
   const line: Record<number, boolean> = {};
   // mark the sensor hits on the line
-  input
+  cave.layout
     .map((sensor) => sensor.intersectX(y))
     .filter((r) => r !== undefined)
     .forEach((range) => {
@@ -88,7 +106,7 @@ const part1 = (rawInput: string) => {
       }
     });
   // remove existing beacons from the count
-  input
+  cave.layout
     .map((s) => s.closest.point)
     .filter((p) => p.y === y)
     .forEach((p) => (line[p.x] = false));
@@ -96,10 +114,9 @@ const part1 = (rawInput: string) => {
 };
 
 const part2 = (rawInput: string) => {
-  const input = parseInput(rawInput);
   // test
   // const max = 20;
-  const max = 4000000;
+  const max = cave.layout.length === 14 ? 20 : 4000000;
   let line = new Set<Range>();
   // mark the sensor hits on the line
   let y = 0;
@@ -111,7 +128,7 @@ const part2 = (rawInput: string) => {
     // console.log(y,"3",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined).filter((r) => r!.min < max))
     // console.log(y,"4",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined).filter((r) => r!.min < max).map((r) => (r?.max! > max ? new Range(r!.min, max) : r!)))
     // console.log(y,"5",input.map((sensor) => sensor.intersectX(y)).filter((r) => r !== undefined).filter((r) => r!.min < max).map((r) => (r?.max! > max ? new Range(r!.min, max) : r!)).map((r) => (r?.min! < 0 ? new Range(0, r.max) : r!)))
-    input
+    cave.layout
       .map((sensor) => sensor.intersectX(y))
       .filter((r) => r !== undefined)
       .filter((r) => r!.min < max)
@@ -121,11 +138,11 @@ const part2 = (rawInput: string) => {
     
     let unionsFound = true;
     let looped = 0;
-    // console.log(y,looped,"merging these: ", line)
+    // console.log(y,looped,"merging these: ", line.size)
     while (unionsFound) {
       looped++;
       unionsFound = false;
-      const copy = [...line.values()];
+      const copy = [...line.values()] //.sort((a, b)=> a.min - b.min);
       line = new Set<Range>();
       let merged: number[] = [];
       
@@ -147,11 +164,10 @@ const part2 = (rawInput: string) => {
         }
         if (unions.length) {
           // console.log(y,looped,i, "unions found!",unions);
-          let merge : Range|undefined= unions[0];
-          const remaining = unions.slice(1);
-          remaining.forEach(r=>merge=merge!.union(r));
+          let merge : Range = unions.pop()!;
+          unions.forEach(r => merge = merge!.union(r)!);
           // console.log(y,looped,i,"unions merged!",merge,line.size);
-          line.add(merge);
+          line.add(merge!);
           unionsFound = true;
         } else {
           // console.log(y,looped,i,"no union here!",line.size,merged);
@@ -164,8 +180,9 @@ const part2 = (rawInput: string) => {
       }
       // console.log(y,looped,"loop done", unionsFound, line.size, line)
     }
+    // console.log({looped});
     // console.log(y,"loop done",line.size,line)
-    if (line.size>1){
+    if (line.size > 1){
       found = true;
     } else {
       y++;
@@ -174,9 +191,9 @@ const part2 = (rawInput: string) => {
   
   let result = Array.from(line)
   result.sort((a,b)=>a.min-b.min);
-  console.log(result);
+  // console.log(result);
   let x = result[0].max+1;
-  console.log(`found at (${x},${y})`);
+  // console.log(`found at (${x},${y})`);
   return tuningFrequency(x, y);
 };
 
