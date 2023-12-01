@@ -1,88 +1,46 @@
 import run from "aocrunner";
-const last = new RegExp(/.*(\d).*/);
-const first = new RegExp(/.*?(\d).*/);
-// @ts-ignore
 
-let digits = ['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
-let digits2 = ['0', '1', '2', '3', '4', '5', '6', '7', '8','9'];
-interface Found {digit:string, location:number};
-function findlettersfordigits(line: string): Found[] {
-    let result: {digit:string, location:number}[] = [];
-    digits.forEach((digit,i)=> {
-          let pos = 0;
-          while (line.indexOf(digit, pos) > -1) {
-            let index = line.indexOf(digit, pos);
-            if (index > -1) {
-              result.push({digit: `${i + 1}`, location: index});
-              pos = index + 1;
-            }
-          }
-        }
-    );
-    digits2.forEach((digit,i)=> {
-          let pos = 0;
-          while (line.indexOf(digit, pos) > -1) {
-            let index = line.indexOf(digit, pos);
-            if (index > -1) {
-              result.push({digit: `${i}`, location: index});
-              pos = index + 1;
-            }
-          }
-        }
-    );
+const last1 = new RegExp(/.*(\d).*/);
+const first1 = new RegExp(/.*?(\d).*/);
 
-    // console.log({line,result})
-    return result;
-}
-function findFirst(findings: Found[]): Found {
-  let first = findings[0];
-  findings.forEach((found)=> {
-    if (found.location < first.location) {
-      first = found;
-    }
-  });
-  return first;
-}
-function findLast(findings: Found[]): Found {
-  let last = findings[0];
-  findings.forEach((found)=> {
-    if (found.location > last.location) {
-      last = found;
-    }
-  });
-  return last;
-}
-function getDigit(line: string, regex: RegExp = first) {
+const last2 = new RegExp(/.*(one|two|three|four|five|six|seven|eight|nine|\d).*/);
+const first2 = new RegExp(/.*?(one|two|three|four|five|six|seven|eight|nine|\d).*/);
+
+const digitLookup: {[key: string]: string} = {
+    'one': '1',
+    'two': '2',
+    'three': '3',
+    'four': '4',
+    'five': '5',
+    'six': '6',
+    'seven': '7',
+    'eight': '8',
+    'nine': '9'
+    };
+function getDigit(line: string, regex: RegExp) {
   let match = regex.exec(line);
-  return match && match[1];
+  if (match === null) {throw new Error(`No match found for ${regex} in ${line}`);}
+  let digit = match[1];
+  return digitLookup[digit] || digit;
 }
 
-const parseInput = (rawInput: string) => rawInput
-    .split("\n");
+function getResult(rawInput: string, first: RegExp, last: RegExp) {
+    return rawInput
+        .split("\n")
+        .map((line) => ({
+            first: getDigit(line, first),
+            last: getDigit(line, last)
+        }))
+        .map((x) => Number.parseInt(`${x.first}${x.last}`))
+        .reduce((acc, curr) => acc + curr, 0);
+}
+
 const part1 = (rawInput: string) => {
-  const input = parseInput(rawInput)
-      .map((line) => ({
-    first: getDigit(line, first),
-    last: getDigit(line, last)}));
-  return input.filter(match=> match != null ).map((match) => {
-    // @ts-ignore
-    // console.log(match);
-    return Number.parseInt(`${match.first}${match.last}`);
-  }).reduce((acc, curr) => acc + curr, 0);
+    return getResult(rawInput, first1, last1);
 
 };
-
 const part2 = (rawInput: string) => {
-  return  parseInput(rawInput)
-      .map(line=> ({found: findlettersfordigits(line), line}))
-      .map((findings) => ({...findings,
-        first: findFirst(findings.found),
-        last: findLast(findings.found)}))
-        .map((match) => {
-    // @ts-ignore
-    // console.log({match, no:`${match.first.digit}${match.last.digit}`});
-    return Number.parseInt(`${match.first.digit}${match.last.digit}`);
-  }).reduce((acc, curr) => acc + curr, 0);
+    return getResult(rawInput, first2, last2);
 };
 
 let input1 = `1abc2
