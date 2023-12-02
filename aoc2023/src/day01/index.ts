@@ -1,6 +1,16 @@
 import run from "aocrunner";
-import * as R  from "ramda";
+import {
+    join,
+    juxt,
+    last,
+    map,
+    match,
+    pipe,
+    split,
+    sum
+} from "ramda";
 
+const {parseInt} = Number;
 const last1 = new RegExp(/.*(\d).*/);
 const first1 = new RegExp(/.*?(\d).*/);
 
@@ -19,29 +29,22 @@ const digits: {[digit: string]: string} = {
     nine: '9'
 };
 
-const getDigit = (regex: RegExp) => {
-    return R.pipe(
-        R.match(regex),
-        R.last,
-        (x: string) => digits[x] || x
-    );
-}
-
-const getSum = (first: RegExp, last: RegExp) => {
-    return R.pipe(
-        R.split("\n"), 
-        R.map(R.applySpec({
-            first: getDigit(first), 
-            last: getDigit(last) 
-        })),
-        R.map(R.pipe( 
-            R.values, 
-            R.join(''),
-            Number.parseInt 
-        )),
-        R.sum 
-    );
-}
+const translateDigitNameToDigit = (x: string) => digits[x] || x;
+const getDigit = (regex: RegExp) => pipe(
+    match(regex),
+    last,
+    translateDigitNameToDigit
+);
+const getCalibrationValue = (first: RegExp, last: RegExp) => pipe(
+    juxt([getDigit(first), getDigit(last)]),
+    join(''),
+    parseInt
+);
+const getSum = (first: RegExp, last: RegExp) => pipe(
+    split("\n"),
+    map(getCalibrationValue(first, last)),
+    sum
+);
 
 const part1 = getSum(first1, last1);
 const part2 = getSum(first2, last2);
@@ -79,5 +82,5 @@ run({
         solution: part2,
     },
     trimTestInputs: true,
-    onlyTests: true,
+    onlyTests: false,
 });
