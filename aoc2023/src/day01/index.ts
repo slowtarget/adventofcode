@@ -1,5 +1,4 @@
 import run from "aocrunner";
-
 const last1 = new RegExp(/.*(\d).*/);
 const first1 = new RegExp(/.*?(\d).*/);
 
