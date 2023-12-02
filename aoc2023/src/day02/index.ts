@@ -3,7 +3,7 @@ import {Draw, Game} from "./Game.js";
 const parseInput = (rawInput: string) => rawInput.split("\n").map((line) => new Game(line));
 
 const part1 = (rawInput: string) => {
-  const test: Draw = {"blue": 14, "green": 13, "red": 12};
+  const test: Draw = {blue: 14, green: 13, red: 12};
   const input: Game[] = parseInput(rawInput);
   // console.log(input.map(g=>({id: g.id, first:g.draws[0], max:g.max,
   //   possible: g.isPossible(test)})));
