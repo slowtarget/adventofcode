@@ -1,31 +1,17 @@
 import run from "aocrunner";
 import {Card} from "./Card.js";
-import {
-    clamp,
-    flatten,
-    join,
-    juxt,
-    last,
-    map,
-    match,
-    pipe,
-    split,
-    sum,
-    tap
-} from "ramda";
+import {last, map, pipe, split, sum, trim} from "ramda";
 
-const parseInput = (rawInput: string) => rawInput;
-const getMatches = (line: string[]): number => {
-
-    const [winningList, haveList] = line
-        .map((x) => x.trim().split(/\s+/)
-            .map(n => parseInt(n)));
-
-    const matches = haveList.filter((have) => winningList.includes(have)).length;
-    const score = matches ? Math.pow(2, matches - 1) : 0;
-    // console.log({line, matches,winningList,haveList, score});
-    return matches;
-}
+const getMatches = pipe(
+        map (
+            pipe(
+                trim,
+                split(/\s+/),
+                map(parseInt)
+            )
+        ),
+        ([winningList, haveList]) => haveList.filter((have) => winningList.includes(have)).length
+    );
 
 const getScore = pipe(
     split(": "),
@@ -67,7 +53,7 @@ run({
         tests: [
             {
                 name: 'aoc supplied example',
-                input: input,
+                input,
                 expected: 13,
             },
         ],
@@ -77,7 +63,7 @@ run({
         tests: [
             {
                 name: 'aoc supplied example',
-                input: input,
+                input,
                 expected: 30,
             },
         ],
