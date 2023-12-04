@@ -13,7 +13,10 @@ import {
 } from "ramda";
 
 const nextNumber: RegExp = /(.*?)(\d+)(.*)/;
+// const regex = /(\d+)/g;
+
 interface Triplet {index: number, prev: string, curr: string, next: string};
+interface Point {x: number, y: number};
 const splitToSubListsOf3 = (lines: string[]): Triplet[] =>
     lines.map((curr:string, index:number, self: string[]) => {
       const prev = index === 0 ? "" : self[index - 1];
@@ -30,11 +33,11 @@ function getAllIndexes(arr: string, val: string): number[] {
   return indexes;
 }
 
-const toCoords = [
-  {dy: 0, dx: (start:number, end:number, foundAt:number) => start},
-  {dy: 0, dx: (start:number, end:number, foundAt:number) => end - 1},
-  {dy: -1, dx: (start:number, end:number, foundAt:number) => start + foundAt},
-  {dy: +1, dx: (start:number, end:number, foundAt:number) => start + foundAt},
+const toPoint = [
+  (y:number, start:number, end:number, foundAt:number):Point => ({x: start, y}),
+  (y:number, start:number, end:number, foundAt:number):Point => ({x: end - 1, y}),
+  (y:number, start:number, end:number, foundAt:number):Point => ({x: start + foundAt, y: y-1}),
+  (y:number, start:number, end:number, foundAt:number):Point => ({x: start + foundAt, y: y+1}),
 ]
 const toPartNumbers = (triplet: Triplet): number[] => {
   const {index: y, prev, curr, next} = triplet;
@@ -67,9 +70,9 @@ const toPartNumbers = (triplet: Triplet): number[] => {
 
       const gearsAt = test
           .map((x, i) => getAllIndexes(x, '*')
-              .map(foundAt => ({x:toCoords[i].dx(start, end, foundAt), y: toCoords[i].dy + y})))
+            .map(foundAt => toPoint[i](y, start, end, foundAt)))
           .flat()
-          .map(coord=>`${coord.x}_${coord.y}`);
+          .map(point =>`${point.x}_${point.y}`);
 
       gearsAt.forEach(gearAt => {
         gears[gearAt] = gears[gearAt] || [];
