@@ -3,15 +3,15 @@ import {Card} from "./Card.js";
 import {last, map, pipe, split, sum, trim} from "ramda";
 
 const getMatches = pipe(
-        map (
-            pipe(
-                trim,
-                split(/\s+/),
-                map(parseInt)
-            )
-        ),
-        ([winningList, haveList]) => haveList.filter((have) => winningList.includes(have)).length
-    );
+    map(
+        pipe(
+            trim,
+            split(/\s+/),
+            map(parseInt)
+        )
+    ),
+    ([winningList, haveList]) => haveList.filter((have) => winningList.includes(have)).length
+);
 
 const getScore = pipe(
     split(": "),
