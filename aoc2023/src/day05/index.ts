@@ -22,7 +22,27 @@ import {
 } from "ramda";
 import * as fs from "fs";
 import assert from "assert";
+// Returns current time
+// (and, if provided, prints the event's name)
+const now = (eventName: string | null = null) => {
+    if (eventName) {
+        console.log(`Started ${eventName}...`);
+    }
+    return new Date().getTime();
+};
 
+// Store current time as `start`
+let begunAt = now();
+
+// Returns time elapsed since `beginning`
+// (and, optionally, prints the duration in seconds)
+const elapsed = (eventName: string | null = null, beginning: number = begunAt, log: boolean = false) => {
+    const duration = new Date().getTime() - beginning;
+    if (log) {
+        console.log(`${eventName}: ${duration / 1000}s`);
+    }
+    return duration;
+};
 
 const regex = /\d+/g;
 const getFunctionPair = (input: number[]):[(x:number) => boolean, (x:number) => number] =>  {
@@ -149,14 +169,18 @@ console.log("test seed ranges",pipe(
     flatten
 )([1,5,8,2])); // [1,2,3,4,5,8,9]
 const getLocationsFromRanges = (input: string[]):number[] => {
+    const started = now();
     const pipeTransforms = getPipeTransforms(input);
     const transform = getLocationsOfSeeds(pipeTransforms);
+    elapsed("getLocationsFromRanges", started, true);
     return pipe(
         getSeeds,
         splitEvery(2),
         map(tap((x:number[])=>console.log(x[1]))),
         map(
             (range: number[]) => {
+                const event = `starting range ${range}`;
+                const eventStart = now(event);
                 console.log({title:"starting range ", range, now: Date.now()});
                 const [start, length] = range;
                 const end = start + length;
@@ -167,6 +191,7 @@ const getLocationsFromRanges = (input: string[]):number[] => {
                         min = transformed;
                     }
                 }
+                elapsed(`${event} ${min}`, eventStart, true);
                 return min;
             }
         )
