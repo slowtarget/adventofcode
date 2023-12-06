@@ -1,20 +1,21 @@
 import run from "aocrunner";
-import {identity, last, map, pipe, product, replace, split} from "ramda";
+import {head, identity, last, map, pipe, product, replace, split} from "ramda";
 import assert from "assert";
 
 const matchNumbers = /\d+/g
-const stringToNumbers = (line: string):number[] => {
-    let iter = line.matchAll(matchNumbers);
-    const arr = Array.from(iter);
-    return arr.map(x => parseInt(x[0]));
-}
+
 type Transform = (input:string) => string;
-const takeRight: (transform: Transform) => (input: string) => number[] = (transform:Transform) =>
+const numbersFromLine: (transform: Transform) => (input: string) => number[] = (transform:Transform) =>
     pipe (
-      split(': '),
-      last,
-      transform,
-      stringToNumbers
+        transform,
+        (line: string) => line.matchAll(matchNumbers),
+        Array.from,
+        map(
+            pipe(
+                head,
+                parseInt
+            )
+        )
     );
 
 const alwaysRoundUp = (n: number) => {
@@ -59,21 +60,19 @@ const calculateNumberOfOptions = (input: {time:number, distance:number}):number 
     return t2 - t1 + 1;
 }
 const generator = (parser: (input: string) => number[]) =>
-pipe(
-    split("\n"),
-    map(
-        parser
-    ),
-    (input: number[][]):{time:number, distance:number}[] => {
-        const [times, distances] = input;
-        return times.map((time, index) => ({time, distance: distances[index]}))
-    },
-    map(calculateNumberOfOptions),
-    product
-)
+    pipe(
+        split("\n"),
+        map(parser),
+        (input: number[][]):{time:number, distance:number}[] => {
+            const [times, distances] = input;
+            return times.map((time, index) => ({time, distance: distances[index]}))
+        },
+        map(calculateNumberOfOptions),
+        product
+    );
 
-const part1 = generator(takeRight(identity));
-const part2 = generator(takeRight(replace(/\s/g, "")));
+const part1 = generator(numbersFromLine(identity));
+const part2 = generator(numbersFromLine(replace(/\s/g, "")));
 
 let input1 =
 `Time:      7  15   30
