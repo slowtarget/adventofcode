@@ -1,5 +1,5 @@
 import run from "aocrunner";
-import {last, map, pipe, product, replace, split} from "ramda";
+import {identity, last, map, pipe, product, replace, split} from "ramda";
 import assert from "assert";
 
 const matchNumbers = /\d+/g
@@ -8,20 +8,15 @@ const stringToNumbers = (line: string):number[] => {
     const arr = Array.from(iter);
     return arr.map(x => parseInt(x[0]));
 }
-const takeRight: (delim: string) => (input: string) => number[] = (delim:string) =>
+type Transform = (input:string) => string;
+const takeRight: (transform: Transform) => (input: string) => number[] = (transform:Transform) =>
     pipe (
-      split(delim),
+      split(': '),
       last,
+      transform,
       stringToNumbers
     );
 
-const takeRight2: (delim: string) => (input: string) => number[] = (delim:string) =>
-    pipe (
-        split(delim),
-        last,
-        replace(/\s/g, ""),
-        stringToNumbers
-    );
 const alwaysRoundUp = (n: number) => {
     return Math.floor(n) + 1 ;
 }
@@ -43,7 +38,7 @@ const alwaysRoundDown = (n: number) => {
     {value: 1.9, up: 2, down: 1},
     {value: 2.0, up: 3, down: 1},
 ].forEach(({value, up, down}) => {
-    console.log({value, up: alwaysRoundUp(value), down: alwaysRoundDown(value), expectedUp: up, expectedDown: down});
+    // console.log({value, up: alwaysRoundUp(value), down: alwaysRoundDown(value), expectedUp: up, expectedDown: down});
     assert(alwaysRoundUp(value) === up);
     assert(alwaysRoundDown(value) === down);
 });
@@ -56,40 +51,34 @@ const calculateNumberOfOptions = (input: {time:number, distance:number}):number 
     // t = (-T +- sqrt(T^2 - 4d))/-2
     const {time, distance} = input;
     let partial = Math.sqrt(time*time - 4*distance);
-    const t1 = alwaysRoundUp((-time + partial)/(-2));
-    const t2 = alwaysRoundDown((-time - partial)/(-2));
+    const t1 = alwaysRoundUp((time - partial)/2);
+    const t2 = alwaysRoundDown((time + partial)/2);
 
-    console.log({time, distance, t1, t2});
+    // console.log({time, distance, t1, t2});
 
     return t2 - t1 + 1;
 }
-const part1 =
-    pipe(
-        split("\n"),
-        map(takeRight(": ")),
-        (input: number[][]):{time:number, distance:number}[] => {
-          const [times, distances] = input;
-          console.log({input});
-          return times.map((time, index) => ({time, distance: distances[index]}))
-        },
-        map(calculateNumberOfOptions),
-        product
-  );
-
-const part2 = pipe(
+const generator = (parser: (input: string) => number[]) =>
+pipe(
     split("\n"),
-    map(takeRight2(": ")),
+    map(
+        parser
+    ),
     (input: number[][]):{time:number, distance:number}[] => {
         const [times, distances] = input;
-        console.log({input});
         return times.map((time, index) => ({time, distance: distances[index]}))
     },
     map(calculateNumberOfOptions),
     product
 )
 
-let input1 = `Time:      7  15   30
+const part1 = generator(takeRight(identity));
+const part2 = generator(takeRight(replace(/\s/g, "")));
+
+let input1 =
+`Time:      7  15   30
 Distance:  9  40  200`;
+
 run({
   part1: {
     tests: [
