@@ -1,25 +1,6 @@
 import run from "aocrunner";
 
-import {
-    add,
-    append,
-    both,
-    cond,
-    drop,
-    flatten,
-    gt,
-    head,
-    identity,
-    last,
-    lte,
-    map,
-    pipe,
-    range,
-    split,
-    splitEvery,
-    T,
-    tap
-} from "ramda";
+import {cond, drop, flatten, head, identity, last, map, pipe, range, split, splitEvery, T, tap} from "ramda";
 import * as fs from "fs";
 import assert from "assert";
 // Returns current time
@@ -47,22 +28,41 @@ const elapsed = (eventName: string | null = null, beginning: number = begunAt, l
 const regex = /\d+/g;
 const getFunctionPair = (input: number[]):[(x:number) => boolean, (x:number) => number] =>  {
   const [destinationStart,sourceStart, length] = input;
-  return [both(lte(sourceStart), gt(sourceStart + length)), add(destinationStart - sourceStart)];
+  return [(x:number)=> x>=sourceStart && x < (sourceStart + length), (x:number)=> destinationStart - sourceStart + x];
 }
 
-const [predicate, transform] = getFunctionPair([50, 98, 2]);
+const [predicate, transformx] = getFunctionPair([50, 98, 2]);
 
 console.log({p91:predicate(91), p98:predicate(98), p99:predicate(99), p97:predicate(97), p100:predicate(100)});
-console.log({t98:transform(98), t99:transform(99)});
+console.log({t98:transformx(98), t99:transformx(99)});
 
 assert (predicate(98));
 assert (predicate(99));
 assert (!predicate(97));
 assert (!predicate(100));
-assert (transform(98) === 50);
-assert (transform(99) === 51);
+assert (transformx(98) === 50);
+assert (transformx(99) === 51);
 
 const test = cond([getFunctionPair([50, 98, 2]), getFunctionPair([52, 50, 48]), [T, identity]]);
+
+function transform(mappings: number[][], x: number) {
+    const t = mappings
+        .map((list: number[]) => {
+            const [destinationStart, sourceStart, length] = list;
+            return {destinationStart, sourceStart, length};
+        })
+        .find((c) => (x >= c.sourceStart && x < (c.sourceStart + c.length)));
+    if (t) {
+        return t.destinationStart - t.sourceStart + x;
+    } else {
+        return x;
+    }
+}
+
+const test2 = (x:number) => {
+    let mappings = [[50, 98, 2],[52, 50, 48]];
+    return transform(mappings, x);
+}
 // seed  soil
 // source expected
 const tests = [
@@ -76,48 +76,40 @@ const tests = [
 [97,    99],
 [98,    50],
 [99,    51]];
-tests.forEach(([source, expected]) => {
-    const actual = test(source);
-    console.log({source, expected, actual});
-    assert(actual === expected);
-});
-type FunctionPair = [(x:number) => boolean, (x:number) => number];
-const mapLineToFunctionPair: (line: string) => FunctionPair =
+
+[test,test2].map((fntocheck, j)=>{
+    const startedAt = now(`test ${j}`);
+    range(1,50000).map(i=>{
+        tests.forEach(([source, expected]) => {
+            assert(fntocheck(source) === expected);
+        });
+    })
+    elapsed(`Completed test ${j}`, startedAt, true);
+})
+
+
+
+const mapLineToFunctionPair: (line: string) => number[] =
     pipe(
         (line: string) => line.matchAll(regex),
         Array.from,
-        map(parseInt),
-        getFunctionPair
+        map(parseInt)
     );
 
-const getDefaultFunctionPair: () => FunctionPair = () => [T, identity];
+const getTransform: (lines:string[]) => (x:number)=>number = (lines:string[]) => {
+    const mappings = lines.map(mapLineToFunctionPair);
+    return (x: number) => transform(mappings, x);
+}
 
-const mapLinesToFunctionPairs: (lines:string[]) => FunctionPair[] =
-    pipe(
-        map(mapLineToFunctionPair),
-        append(getDefaultFunctionPair()),
-    );
-
-const getTransform = pipe(
-      tap((x:string[])=>console.log({title:"getting transform", t:x[0]})),
-      drop(1),
-      mapLinesToFunctionPairs,
-      cond<any[], number>
-  );
-
-const getLocationsOfSeeds : (pipeTransforms: ((x: number) => number)[]) => (seeds:number[]) => number[] = (pipeTransforms: ((x: number) => number)[]) =>
-    map(
-        pipe(
-            pipeTransforms[0],
-            pipeTransforms[1],
-            pipeTransforms[2],
-            pipeTransforms[3],
-            pipeTransforms[4],
-            pipeTransforms[5],
-            pipeTransforms[6]
-        )
-    );
-
+const getLocationsOfSeed : (pipeTransforms: ((x: number) => number)[]) => (seed:number) => number = (pipeTransforms: ((x: number) => number)[]) => {
+    return (input:number) => {
+        let y = input;
+        pipeTransforms.forEach(t=> {
+            y = t(y)
+        });
+        return y;
+    }
+}
 
 const getPipeTransforms = pipe(
         (x: string[]) => drop(1, x),
@@ -145,7 +137,8 @@ const getLocations = (input: string[]):number[] => {
     )(input);
     console.log({seeds});
     const pipeTransforms = getPipeTransforms(input);
-    return getLocationsOfSeeds(pipeTransforms)(seeds);
+    const getLocationOfThisSeed = getLocationsOfSeed(pipeTransforms);
+    return seeds.map(getLocationOfThisSeed);
 }
 
 const getSeeds: (input: string[]) => number[] =
@@ -171,7 +164,7 @@ console.log("test seed ranges",pipe(
 const getLocationsFromRanges = (input: string[]):number[] => {
     const started = now();
     const pipeTransforms = getPipeTransforms(input);
-    const transform = getLocationsOfSeeds(pipeTransforms);
+    const transform = getLocationsOfSeed(pipeTransforms);
     elapsed("getLocationsFromRanges", started, true);
     return pipe(
         getSeeds,
@@ -179,19 +172,18 @@ const getLocationsFromRanges = (input: string[]):number[] => {
         map(tap((x:number[])=>console.log(x[1]))),
         map(
             (range: number[]) => {
-                const event = `starting range ${range}`;
+                const event = `range ${range}`;
                 const eventStart = now(event);
-                console.log({title:"starting range ", range, now: Date.now()});
                 const [start, length] = range;
                 const end = start + length;
                 let min = Number.MAX_SAFE_INTEGER;
                 for (let i = start; i < end; i++) {
-                    const [transformed] = transform([i]);
+                    const transformed = transform(i);
                     if (transformed < min) {
                         min = transformed;
                     }
                 }
-                elapsed(`${event} ${min}`, eventStart, true);
+                elapsed(`completed ${event} min:${min}`, eventStart, true);
                 return min;
             }
         )
@@ -238,5 +230,5 @@ run({
     solution: part2,
   },
   trimTestInputs: true,
-  onlyTests: false,
+  onlyTests: true,
 });
