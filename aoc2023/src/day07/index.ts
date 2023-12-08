@@ -1,20 +1,5 @@
 import run from "aocrunner";
-import {head, sort, identity, last, map, pipe, product, replace, reverse, split, sum, tap, addIndex, props} from "ramda";
-
-type Transform = (input:string) => string;
-const matchNumbers = /\d+/g
-const numbersFromLine: (transform: Transform) => (input: string) => number[] = (transform:Transform) =>
-    pipe (
-        transform,
-        (line: string) => line.matchAll(matchNumbers),
-        Array.from,
-        map(
-            pipe(
-                head,
-                parseInt
-            )
-        )
-    );
+import {map, pipe, sort, split, sum, tap} from "ramda";
 
 const types:{[type:string]:number} = {
     '5':7,
@@ -101,7 +86,7 @@ class Hand {
             // just jokers
             distributionSorted[0] = 5;
         } else {
-            distributionSorted[0]=distributionSorted[0]+ jokers;
+            distributionSorted[0]=distributionSorted[0] + jokers;
         }
 
         const type = distributionSorted.join("_");
