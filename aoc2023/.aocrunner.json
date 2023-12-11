@@ -128,12 +128,12 @@
     },
     {
       "part1": {
-        "solved": false,
-        "result": "340126608",
+        "solved": true,
+        "result": "1641934234",
         "attempts": [
           "340126608"
         ],
-        "time": 5.284666
+        "time": 4.656541
       },
       "part2": {
         "solved": false,

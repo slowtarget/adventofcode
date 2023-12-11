@@ -1,7 +1,7 @@
 import run from "aocrunner";
 import {aperture, converge, identity, last, map, pipe, reduce, reverse, split, sum} from "ramda";
 
-const numbersRegex = /\d+/g;
+const numbersRegex = /-?\d+/g;
 const numbersFromString = pipe(
     (line: string) => line.matchAll(numbersRegex),
     Array.from,
@@ -51,6 +51,7 @@ const input11=
 `0 3 6 9 12 15
 1 3 6 10 15 21
 10 13 16 21 30 45`;
+const input12 = `-1 -2 -3`
 run({
   part1: {
     tests: [
@@ -58,6 +59,10 @@ run({
         input: input11,
         expected: 114,
       },
+        {
+            input: input12,
+            expected: -4,
+        },
     ],
     solution: part1,
   },
