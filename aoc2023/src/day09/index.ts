@@ -1,5 +1,5 @@
 import run from "aocrunner";
-import {aperture, converge, identity, last, map, pipe, reduce, reverse, split, sum} from "ramda";
+import {aperture, converge, head, identity, last, map, pipe, reduce, reverse, split, sum} from "ramda";
 
 const numbersRegex = /-?\d+/g;
 const numbersFromString = pipe(
@@ -27,11 +27,20 @@ const step:(sequences:number[][])=>number[][] = converge((diff:number[],sequence
     return step([...sequences, diff]);
 },[getDifferences,identity])
 const getLastNumber: (input:number[])=> number = last;
+const getFirstNumber: (input:number[])=> number = head;
+
 const getNextInSequence = pipe(
     (x)=>[x],
     step,
     map(getLastNumber),
     sum
+);
+
+const getNextInSequence2 = pipe(
+    (x)=>[x],
+    step,
+    map(getFirstNumber),
+    (input:number[])=>input.reduce((acc:number,val:number, index:number)=>index % 2 === 0 ? acc + val : acc - val,0)
 );
 
 const part1 = pipe(
@@ -46,7 +55,16 @@ const part1 = pipe(
 );
 // 340126608 too low
 
-const part2 = (rawInput: string) => undefined;
+const part2 = pipe(
+    split("\n"),
+    map(
+        pipe(
+            numbersFromString,
+            getNextInSequence2
+        )
+    ),
+    sum
+);
 const input11=
 `0 3 6 9 12 15
 1 3 6 10 15 21
@@ -68,10 +86,10 @@ run({
   },
   part2: {
     tests: [
-      // {
-      //   input: ``,
-      //   expected: "",
-      // },
+      {
+        input: input11,
+        expected: 2,
+      },
     ],
     solution: part2,
   },
