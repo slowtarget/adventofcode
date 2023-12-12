@@ -36,7 +36,7 @@ const getNextInSequence = pipe(
     sum
 );
 
-const getNextInSequence2 = pipe(
+const getPreviousInSequence = pipe(
     (x)=>[x],
     step,
     map(getFirstNumber),
@@ -60,7 +60,7 @@ const part2 = pipe(
     map(
         pipe(
             numbersFromString,
-            getNextInSequence2
+            getPreviousInSequence
         )
     ),
     sum
